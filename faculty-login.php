@@ -1,6 +1,54 @@
 <?php
 // faculty-login.php
-// Exact conversion from faculty-login.html -> faculty-login.php
+// Implements secure login logic
+session_start(); // Start the session at the very top
+require_once 'db.php'; // Database connection must be defined here as $pdo
+
+$login_error = '';
+$facultyEmail = ''; // Variable to retain email in the form on failure
+
+// Check if the form was submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 1. Sanitize input
+    $facultyEmail = filter_input(INPUT_POST, 'facultyId', FILTER_SANITIZE_EMAIL);
+    $password = $_POST['password'] ?? ''; // Get password as is
+
+    if ($facultyEmail && $password) {
+        try {
+            // 2. Prepare and execute the query to fetch the faculty record by email and the stored password hash
+            // We fetch 'password' (the hash) from the new column.
+            $stmt = $pdo->prepare("SELECT faculty_id, first_name, password FROM Faculty WHERE email = :email");
+            $stmt->execute([':email' => $facultyEmail]);
+            $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // 3. Verify existence and password
+            if ($faculty) {
+                // Securely verify the plain-text password against the stored hash
+                if (password_verify($password, $faculty['password'])) {
+                    
+                    // Login successful!
+                    $_SESSION['faculty_id'] = $faculty['faculty_id'];
+                    $_SESSION['faculty_name'] = $faculty['first_name'];
+                    $_SESSION['logged_in'] = true;
+
+                    // Redirect to the faculty dashboard
+                    header('Location: index.php'); 
+                    exit;
+                }
+            }
+            
+            // If execution reaches here, login failed (invalid email or password)
+            $login_error = 'Invalid email or password. Please try again.';
+
+        } catch (PDOException $e) {
+            // Log the error for debugging and show a generic message to the user
+            error_log("Login PDO Error: " . $e->getMessage());
+            $login_error = 'A system error occurred. Please try again later.';
+        }
+    } else {
+        $login_error = 'Please enter both your email and password.';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,25 +60,18 @@
   <meta name="author" content="Thapar Institute of Engineering & Technology">
   <title>Faculty Login - Faculty Pool</title>
 
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Custom CSS -->
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- AOS Animation Library -->
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-  <!-- Tailwind Config -->
   <script>
     tailwind.config = {
       theme: {
@@ -53,7 +94,7 @@
   </script>
 
   <style>
-    /* --- preserved CSS (same as your original file) --- */
+    /* --- preserved CSS --- */
     .login-container {
       min-height: 100vh;
       background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 50%, #f0f4f8 100%);
@@ -121,6 +162,22 @@
       font-weight: 600;
       margin-bottom: 0.5rem;
       display: block;
+    }
+    
+    /* New styles for password toggle input group */
+    .password-input-group {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #8B0000;
+        z-index: 10;
+        padding: 5px; /* Increase click area */
     }
 
     .login-btn {
@@ -305,27 +362,22 @@
 </head>
 <body class="font-poppins">
   <div class="login-container">
-    <!-- Floating Background Elements -->
     <div class="floating-elements">
       <div class="floating-element"></div>
       <div class="floating-element"></div>
       <div class="floating-element"></div>
     </div>
 
-    <!-- Back to Home Link -->
     <a href="index.php" class="back-to-home" data-aos="fade-right">
       <i class="fas fa-arrow-left"></i>
       <span>Back to Home</span>
     </a>
 
-    <!-- Login Form Container -->
     <div class="container-fluid d-flex align-items-center justify-content-center min-vh-100">
       <div class="row w-100">
         <div class="col-12 col-md-6 col-lg-4 mx-auto">
           <div class="login-card p-5" data-aos="zoom-in" data-aos-duration="800">
-            <!-- Header -->
             <div class="text-center mb-4">
-              <!-- Faculty badge removed (kept commented in source) -->
               <div class="text-4xl text-primary-600 mb-3">
                 <i class="fas fa-user-tie"></i>
               </div>
@@ -338,21 +390,31 @@
               </div>
             </div>
 
-            <!-- Login Form -->
-            <form id="facultyLoginForm" action="#" method="post">
+            <?php if ($login_error): ?>
+                <div class="alert alert-danger text-center mb-4" role="alert">
+                    <?php echo $login_error; ?>
+                </div>
+            <?php endif; ?>
+
+            <form id="facultyLoginForm" method="post">
               <div class="form-group">
                 <label for="facultyId" class="form-label">
                   <i class="fas fa-id-card me-2"></i>Faculty email
                 </label>
-                <input type="text" id="facultyId" name="facultyId" class="form-control" placeholder="Enter your email" required>
+                <input type="email" id="facultyId" name="facultyId" class="form-control" placeholder="Enter your email" required value="<?php echo htmlspecialchars($facultyEmail); ?>">
               </div>
 
               <div class="form-group">
                 <label for="password" class="form-label">
                   <i class="fas fa-lock me-2"></i>Password
                 </label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
-              </div>
+                <div class="password-input-group">
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+                    <span class="password-toggle" onclick="togglePasswordVisibility()">
+                        <i class="fas fa-eye" id="password-toggle-icon"></i>
+                    </span>
+                </div>
+                </div>
 
               <button type="submit" class="login-btn">
                 <i class="fas fa-sign-in-alt me-2"></i>
@@ -360,7 +422,6 @@
               </button>
             </form>
 
-            <!-- Faculty Features -->
             <div class="faculty-features">
               <h6><i class="fas fa-star me-2"></i>Faculty Benefits</h6>
               <ul>
@@ -371,30 +432,26 @@
               </ul>
             </div>
 
-            <!-- Login Links -->
             <div class="login-links">
               <a href="forgot-password.php" class="forgot-password">
                 <i class="fas fa-key me-1"></i>
                 Forgot Password?
               </a>
               <span class="text-muted">|</span>
-              <a href="#" class="faculty-signup">
+              <a href="faculty-registration.php" class="faculty-signup">
                 <i class="fas fa-user-plus me-1"></i>
                 Faculty Registration
               </a>
             </div>
 
-            <!-- Note: "Are you a Student/User?" and User Login removed -->
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   
-  <!-- AOS Animation Library -->
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   
   <script>
@@ -405,33 +462,23 @@
       once: true
     });
 
-    // Form validation and submission (demo)
-    document.getElementById('facultyLoginForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const facultyId = document.getElementById('facultyId').value;
-      const password = document.getElementById('password').value;
-      
-      if (!facultyId || !password) {
-        alert('Please fill in all fields');
-        return;
-      }
-      
-      // Simulate login process
-      const loginBtn = document.querySelector('.login-btn');
-      const originalText = loginBtn.innerHTML;
-      
-      loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
-      loginBtn.disabled = true;
-      
-      setTimeout(() => {
-        alert('Faculty login successful! (This is a demo)');
-        loginBtn.innerHTML = originalText;
-        loginBtn.disabled = false;
-        // Here you would typically redirect to the faculty dashboard
-        // window.location.href = 'faculty-dashboard.php';
-      }, 1200);
-    });
+    /**
+     * Toggles the visibility of the password field.
+     */
+    function togglePasswordVisibility() {
+        const passwordField = document.getElementById('password');
+        const toggleIcon = document.getElementById('password-toggle-icon');
+
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordField.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
   </script>
 </body>
 </html>
