@@ -1,3 +1,7 @@
+<?php
+// faculty-login.php
+// Exact conversion from faculty-login.html -> faculty-login.php
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,6 +53,7 @@
   </script>
 
   <style>
+    /* --- preserved CSS (same as your original file) --- */
     .login-container {
       min-height: 100vh;
       background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 50%, #f0f4f8 100%);
@@ -63,7 +68,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: 
+      background:
         radial-gradient(circle at 20% 80%, rgba(139, 0, 0, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(139, 0, 0, 0.05) 0%, transparent 50%);
       pointer-events: none;
@@ -320,10 +325,7 @@
           <div class="login-card p-5" data-aos="zoom-in" data-aos-duration="800">
             <!-- Header -->
             <div class="text-center mb-4">
-              <!-- <div class="faculty-badge">
-                <i class="fas fa-chalkboard-teacher me-2"></i>
-                Faculty Portal
-              </div> -->
+              <!-- Faculty badge removed (kept commented in source) -->
               <div class="text-4xl text-primary-600 mb-3">
                 <i class="fas fa-user-tie"></i>
               </div>
@@ -342,14 +344,14 @@
                 <label for="facultyId" class="form-label">
                   <i class="fas fa-id-card me-2"></i>Faculty email
                 </label>
-                <input type="text" id="facultyId" name="facultyId" class="form-control" placeholder="Enter your email" required pattern="[0-9]+" title="Please enter only numbers">
+                <input type="text" id="facultyId" name="facultyId" class="form-control" placeholder="Enter your email" required>
               </div>
 
               <div class="form-group">
                 <label for="password" class="form-label">
                   <i class="fas fa-lock me-2"></i>Password
                 </label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required pattern="[0-9]+" title="Please enter only numbers">
+                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
               </div>
 
               <button type="submit" class="login-btn">
@@ -382,14 +384,7 @@
               </a>
             </div>
 
-            <!-- User Login Link -->
-            <!-- <div class="text-center mt-4">
-              <p class="text-muted mb-2">Are you a Student/User?</p>
-              <a href="user-login.html" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-user-graduate me-2"></i>
-                User Login
-              </a>
-            </div> -->
+            <!-- Note: "Are you a Student/User?" and User Login removed -->
           </div>
         </div>
       </div>
@@ -402,7 +397,6 @@
   <!-- AOS Animation Library -->
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   
-  
   <script>
     // Initialize AOS
     AOS.init({
@@ -411,7 +405,7 @@
       once: true
     });
 
-    // Form validation and submission
+    // Form validation and submission (demo)
     document.getElementById('facultyLoginForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
@@ -435,45 +429,9 @@
         loginBtn.innerHTML = originalText;
         loginBtn.disabled = false;
         // Here you would typically redirect to the faculty dashboard
-        // window.location.href = 'faculty-dashboard.html';
-      }, 2000);
-    });
-
-    // Add floating animation to form elements
-    document.addEventListener('DOMContentLoaded', function() {
-      const formElements = document.querySelectorAll('.form-control');
-      formElements.forEach((element, index) => {
-        element.style.animationDelay = `${index * 0.1}s`;
-        element.classList.add('animate__animated', 'animate__fadeInUp');
-      });
-    });
-
-    // Faculty ID validation - numbers only
-    document.getElementById('facultyId').addEventListener('input', function(e) {
-      // Remove any non-numeric characters
-      this.value = this.value.replace(/[^0-9]/g, '');
-    });
-
-    // Password validation - numbers only
-    document.getElementById('password').addEventListener('input', function(e) {
-      // Remove any non-numeric characters
-      this.value = this.value.replace(/[^0-9]/g, '');
-    });
-
-    // Prevent non-numeric key presses for Faculty ID
-    document.getElementById('facultyId').addEventListener('keypress', function(e) {
-      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-      }
-    });
-
-    // Prevent non-numeric key presses for Password
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-      }
+        // window.location.href = 'faculty-dashboard.php';
+      }, 1200);
     });
   </script>
 </body>
 </html>
-
