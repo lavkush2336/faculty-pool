@@ -89,7 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Book Appointment - <?php echo e($faculty['name']); ?></title>
 
-  <!-- load same assets as index -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
@@ -123,24 +122,152 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .error { background:#fff0f0; border:1px solid #f5c6cb; color:#8B0000; padding:10px; border-radius:8px; margin-bottom:12px; }
     .success { background:#edf7ee; border:1px solid #c3e6cb; color:#155724; padding:10px; border-radius:8px; margin-bottom:12px; }
 
-    /* small tweaks for hero spacing */
-    .hero-section.custom-hero { padding: 36px 0 18px 0; margin-bottom: 18px; }
-    .creative-nav .nav-item { color: #222; font-weight:600; text-decoration:none; padding:6px 8px; }
+    /* ---------------------------------------------------------------------- */
+    /* NAV BAR STYLES (EXACT MATCH TO INDEX.PHP) */
+    /* ---------------------------------------------------------------------- */
+    .creative-nav { 
+      background: #8B0000; /* Primary Dark Red/Maroon */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+      position: sticky; 
+      top: 0; 
+      z-index: 1000; 
+    }
+    .creative-nav .nav-item { 
+      color: #fff; /* White text */
+      font-weight: 600; 
+      text-decoration: none; 
+      padding: 8px 12px; 
+      transition: color 0.3s ease, background-color 0.3s ease; 
+      border-radius: 6px; 
+      display: inline-block;
+    }
+    .creative-nav .nav-item:hover {
+      color: #fff; 
+      background-color: rgba(0, 0, 0, 0.15); /* Slightly darker background on hover */
+    }
+    /* FIX: Active button should look like a highlighted button on a dark background */
+    .creative-nav .nav-item.active {
+      color: #fff; /* White text */
+      background-color: #A52A2A; /* Slightly lighter/different maroon for contrast */
+      font-weight: 700;
+      position: relative;
+    }
+    /* FIX: Remove the non-matching indicator from the bottom */
+    .creative-nav .nav-item.active::after {
+      content: none;
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* HERO SECTION STYLES (EXACT MATCH TO INDEX.PHP) */
+    /* ---------------------------------------------------------------------- */
+    .hero-section {
+      position: relative;
+      /* Using the exact gradient implied by index.php's visual style */
+      background: linear-gradient(135deg, #8B0000 0%, #B22222 100%); 
+      color: #fff;
+      padding: 60px 0 60px 0; 
+      text-align: center;
+      overflow: hidden;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .hero-section .hero-content {
+      position: relative;
+      z-index: 10;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .hero-title {
+      font-size: 3rem; /* Adjusted for visual match */
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .hero-subtitle {
+      font-size: 1.25rem;
+      font-weight: 300;
+      margin-bottom: 1.5rem;
+      opacity: 0.8;
+    }
+    .hero-decoration {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 15px;
+    }
+    .decoration-line {
+      width: 40px;
+      height: 2px;
+      background: #fff;
+      opacity: 0.5;
+    }
+    .decoration-dot {
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border-radius: 50%;
+      margin: 0 10px;
+    }
+    
+    /* Hero Particles Styling & Animation */
+    .hero-particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .particle {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      opacity: 0.6;
+      animation: particle-float infinite ease-in-out;
+    }
+    .particle:nth-child(1) {
+      width: 30px; height: 30px; top: 10%; left: 20%;
+      animation-duration: 15s; animation-delay: 0s;
+    }
+    .particle:nth-child(2) {
+      width: 50px; height: 50px; top: 50%; left: 80%;
+      animation-duration: 20s; animation-delay: 5s;
+    }
+    .particle:nth-child(3) {
+      width: 20px; height: 20px; top: 80%; left: 40%;
+      animation-duration: 12s; animation-delay: 2s;
+    }
+    .particle:nth-child(4) {
+      width: 40px; height: 40px; top: 20%; left: 90%;
+      animation-duration: 18s; animation-delay: 8s;
+    }
+    .particle:nth-child(5) {
+      width: 60px; height: 60px; top: 70%; left: 10%;
+      animation-duration: 25s; animation-delay: 12s;
+    }
+    
+    @keyframes particle-float {
+      0% { transform: translate(0, 0) rotate(0deg); opacity: 0.6; }
+      25% { transform: translate(20px, -20px) rotate(90deg); opacity: 0.7; }
+      50% { transform: translate(0, 40px) rotate(180deg); opacity: 0.5; }
+      75% { transform: translate(-20px, -20px) rotate(270deg); opacity: 0.6; }
+      100% { transform: translate(0, 0) rotate(360deg); opacity: 0.6; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- SITE NAV (copied from index) -->
-   <nav class="creative-nav">
+  <nav class="creative-nav">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex justify-between items-center py-3">
-        <!-- Left side: Home + Programs -->
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
           <a href="department.php" class="nav-item">PROGRAMS</a>
         </div>
 
-        <!-- Right side: Faculty -->
         <div class="flex space-x-8">
           <a href="faculty-member.php" class="nav-item active">FACULTY</a>
         </div>
@@ -148,25 +275,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </nav>
 
-  <!-- HERO (same style as index) -->
-  <section class="hero-section custom-hero">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="hero-content">
-        <h1 class="hero-title">Book Appointment</h1>
-        <p class="hero-subtitle">Request a meeting with <?php echo e($faculty['name']); ?></p>
-        <div class="hero-decoration">
-          <div class="decoration-line"></div>
-          <div class="decoration-dot"></div>
-          <div class="decoration-line"></div>
-        </div>
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Book Appointment</h1>
+      <p class="hero-subtitle">Request a meeting with <?php echo e($faculty['name']); ?></p>
+      <div class="hero-decoration">
+        <div class="decoration-line"></div>
+        <div class="decoration-dot"></div>
+        <div class="decoration-line"></div>
       </div>
+    </div>
+    <div class="hero-particles">
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
     </div>
   </section>
 
-  <!-- page content -->
   <div class="page-inner">
     <div class="layout">
-      <!-- LEFT: faculty card (vertical stacked) -->
       <div class="left-card" aria-label="Faculty">
         <div class="faculty-card-vertical">
           <div class="faculty-image">
@@ -189,7 +318,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
 
-      <!-- RIGHT: booking form -->
       <div class="form-card">
         <h4>Book Appointment</h4>
 
@@ -255,7 +383,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
 
-  <!-- FOOTER (same as index) -->
   <footer class="creative-footer mt-5">
     <div class="max-w-7xl mx-auto px-4 py-8 text-center">
       <p>&copy; <?php echo date('Y'); ?> Thapar Institute of Engineering & Technology. All rights reserved.</p>
