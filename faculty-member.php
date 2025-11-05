@@ -34,6 +34,9 @@
       overflow: hidden;
       max-width: 900px;
       transition: all 0.3s ease;
+      cursor: pointer; /* pointer on hover */
+      text-decoration: none; /* removes underline when wrapped in link */
+      color: inherit; /* keeps text color same */
     }
 
     .faculty-card:hover {
@@ -53,10 +56,10 @@
     }
 
     .faculty-image img {
-      width: 90%;
+      width: 95%;
       height: 100%;
       object-fit: cover;
-      border-right: 5px solid #8B0000;
+      border: none;
     }
 
     .faculty-info {
@@ -94,23 +97,19 @@
       display: inline-block;
       color: #8B0000;
       font-weight: 600;
-      text-decoration: none;
+      text-decoration: none;   /* removes underline */
       margin-top: 10px;
       transition: color 0.3s ease;
     }
 
     .faculty-info a:hover {
       color: #A52A2A;
+      text-decoration: none;
     }
 
     @media (max-width: 768px) {
       .faculty-card {
         flex-direction: column;
-      }
-
-      .faculty-image img {
-        border-right: none;
-        border-bottom: 5px solid #8B0000;
       }
 
       .faculty-info {
@@ -120,8 +119,9 @@
   </style>
 </head>
 <body>
-    <a href="book-appointment.php">
-  <div class="faculty-card">
+
+  <!-- Clickable Faculty Card -->
+  <a href="book-appointment.php" class="faculty-card">
     <div class="faculty-image">
       <img src="images/ashima-singh.jpg" alt="Dr. Ashima Singh">
     </div>
@@ -135,7 +135,7 @@
       <h6>Email</h6>
       <p><i class="fas fa-envelope me-2"></i>ashima@thapar.edu</p>
     </div>
-  </div>
   </a>
+
 </body>
 </html>
