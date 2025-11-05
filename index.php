@@ -57,7 +57,7 @@
       <div class="flex justify-between items-center py-3">
         <!-- Left side: Home + Programs -->
         <div class="flex space-x-8">
-          <a href="#" class="nav-item">HOME</a>
+          <a href="index.php" class="nav-item">HOME</a>
           <a href="department.php" class="nav-item">PROGRAMS</a>
         </div>
 
