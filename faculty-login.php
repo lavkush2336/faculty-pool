@@ -373,7 +373,7 @@
 
             <!-- Login Links -->
             <div class="login-links">
-              <a href="faculty-forgot-password.html" class="forgot-password">
+              <a href="forgot-password.html" class="forgot-password">
                 <i class="fas fa-key me-1"></i>
                 Forgot Password?
               </a>
