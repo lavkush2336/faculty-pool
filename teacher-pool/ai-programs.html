@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=5.0, user-scalable=yes">
+  <meta name="description" content="AI Programs - Thapar Institute of Engineering & Technology. Explore Artificial Intelligence and Machine Learning programs.">
+  <meta name="keywords" content="AI, artificial intelligence, machine learning, programs, Thapar University, TIET, academic programs">
+  <meta name="author" content="Thapar Institute of Engineering & Technology">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#8B0000">
+  <title>AI Programs - Thapar Institute of Engineering & Technology</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- AOS Animation Library -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              600: '#dc2626',
+              700: '#b91c1c',
+              800: '#991b1b',
+              900: '#7f1d1d',
+            }
+          },
+          fontFamily: {
+            'inter': ['Inter', 'sans-serif'],
+            'poppins': ['Poppins', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-poppins bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+  
+  <!-- Animated Background Elements -->
+  <div class="animated-bg">
+    <div class="floating-circle circle-1"></div>
+    <div class="floating-circle circle-2"></div>
+    <div class="floating-circle circle-3"></div>
+    <div class="floating-square square-1"></div>
+    <div class="floating-square square-2"></div>
+  </div>
+
+  <!-- Top Navigation -->
+  <nav class="creative-nav">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex justify-between items-center py-3">
+        <div class="flex space-x-8">
+          <a href="index.html" class="nav-item">HOME</a>
+          <a href="#" class="nav-item">ABOUT US</a>
+          <a href="#" class="nav-item">PROGRAMS</a>
+          <a href="#" class="nav-item">ADMISSIONS</a>
+          <a href="#" class="nav-item">RESEARCH/PROJECTS</a>
+          <a href="#" class="nav-item active">FACULTY</a>
+        </div>
+        <div class="flex space-x-4 ml-12">
+          <a href="user-login.html" class="nav-item">
+            <i class="fas fa-user-graduate me-2"></i>User Login
+          </a>
+          <a href="faculty-login.html" class="nav-item">
+            <i class="fas fa-chalkboard-teacher me-2"></i>Faculty Login
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Artificial Intelligence Programs</h1>
+      <p class="hero-subtitle">Explore cutting-edge AI and Machine Learning programs</p>
+      <div class="hero-decoration">
+        <div class="decoration-line"></div>
+        <div class="decoration-dot"></div>
+        <div class="decoration-line"></div>
+      </div>
+    </div>
+    <div class="hero-particles">
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <section class="main-content">
+    <div class="max-w-7xl mx-auto">
+
+      <!-- Back Button -->
+      <div class="back-button-container top" data-aos="fade-up">
+        <button class="creative-button" onclick="goBack()">
+          <i class="fas fa-arrow-left"></i>
+          <span>Back to Programs</span>
+        </button>
+      </div>
+
+      <!-- AI Programs Grid -->
+      <div class="ai-programs-section" data-aos="fade-up">
+        <h2 class="section-title">
+          <i class="fas fa-brain"></i>
+          AI & Machine Learning Programs
+        </h2>
+
+        <div class="ai-programs-grid">
+          <!-- AI Program Cards -->
+          <div class="ai-program-card" data-aos="zoom-in" data-aos-delay="100" onclick="navigateToMLFaculty(event)">
+            <div class="program-icon">
+              <i class="fas fa-robot"></i>
+            </div>
+            <h3 class="program-title">Machine Learning</h3>
+            <p class="program-description">Advanced algorithms and statistical models for intelligent systems</p>
+            <div class="program-features">
+              <span class="feature-tag">Algorithms</span>
+              <span class="feature-tag">Statistical Models</span>
+              <span class="feature-tag">Data Mining</span>
+            </div>
+          </div>
+
+          <div class="ai-program-card" data-aos="zoom-in" data-aos-delay="150">
+            <div class="program-icon">
+              <i class="fas fa-brain"></i>
+            </div>
+            <h3 class="program-title">Deep Learning</h3>
+            <p class="program-description">Neural networks and advanced AI architectures for complex problem solving</p>
+            <div class="program-features">
+              <span class="feature-tag">Neural Networks</span>
+              <span class="feature-tag">CNN & RNN</span>
+              <span class="feature-tag">TensorFlow</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="creative-footer">
+    <div class="max-w-7xl mx-auto px-4 py-8 text-center">
+      <p>&copy; 2024 Thapar Institute of Engineering & Technology. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- AOS Animation Library -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  
+  <script src="script.js"></script>
+</body>
+</html>

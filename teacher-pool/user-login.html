@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Login - Faculty Pool</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 50%, #f0f4f8 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #8B0000, #A52A2A, #8B0000);
+      border-radius: 20px 20px 0 0;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header i {
+      font-size: 3rem;
+      color: #8B0000;
+      margin-bottom: 15px;
+    }
+
+    .header h2 {
+      color: #8B0000;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      color: #8B0000;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: white;
+      pointer-events: auto;
+      -webkit-user-select: auto;
+      user-select: auto;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: #8B0000;
+      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+    }
+
+    .form-control::placeholder {
+      color: #999;
+    }
+
+    .login-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+      pointer-events: auto;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 0, 0, 0.3);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .remember-me input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #8B0000;
+      pointer-events: auto;
+    }
+
+    .remember-me label {
+      color: #666;
+      font-size: 14px;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .login-links {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .login-links a {
+      color: #8B0000;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 0 10px;
+      transition: color 0.3s ease;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .login-links a:hover {
+      color: #A52A2A;
+    }
+
+    .faculty-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .faculty-link p {
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .btn-outline-primary {
+      border: 2px solid #8B0000;
+      color: #8B0000;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      pointer-events: auto;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .btn-outline-primary:hover {
+      background: #8B0000;
+      color: white;
+    }
+
+    .back-link {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #8B0000;
+      text-decoration: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .back-link:hover {
+      color: #A52A2A;
+      transform: translateX(-3px);
+    }
+
+    .decoration {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .decoration-line {
+      width: 30px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #8B0000, transparent);
+    }
+
+    .decoration-dot {
+      width: 6px;
+      height: 6px;
+      background: #8B0000;
+      border-radius: 50%;
+    }
+
+    /* Ensure all interactive elements work */
+    input, button, a, select, textarea {
+      pointer-events: auto !important;
+      -webkit-user-select: auto !important;
+      user-select: auto !important;
+    }
+
+    /* Remove any potential blocking */
+    * {
+      pointer-events: auto !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Back to Home Link -->
+  <a href="index.html" class="back-link">
+    <i class="fas fa-arrow-left"></i>
+    <span>Back to Home</span>
+  </a>
+
+  <div class="login-container">
+    <div class="login-card">
+      <!-- Header -->
+      <div class="header">
+        <i class="fas fa-user-graduate"></i>
+        <h2>User Login</h2>
+        <p>Faculty Pool - Thapar Institute</p>
+        <div class="decoration">
+          <div class="decoration-line"></div>
+          <div class="decoration-dot"></div>
+          <div class="decoration-line"></div>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form id="userLoginForm">
+        <div class="form-group">
+          <label for="username" class="form-label">
+            <i class="fas fa-user"></i> Username
+          </label>
+          <input type="text" id="username" name="username" class="form-control" placeholder="Enter your user ID (numbers only)" required pattern="[0-9]+" title="Please enter only numbers">
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">
+            <i class="fas fa-lock"></i> Password
+          </label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password (numbers only)" required pattern="[0-9]+" title="Please enter only numbers">
+        </div>
+
+        <div class="remember-me">
+          <input type="checkbox" id="rememberMe" name="rememberMe">
+          <label for="rememberMe">Remember me</label>
+        </div>
+
+        <button type="submit" class="login-btn">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+      </form>
+
+      <!-- Login Links -->
+      <div class="login-links">
+        <a href="forgot-password.html" class="forgot-password">
+          <i class="fas fa-key"></i> Forgot Password?
+        </a>
+      </div>
+
+      <!-- Faculty Login Link -->
+      <div class="faculty-link">
+        <p>Are you a Faculty Member?</p>
+        <a href="faculty-login.html" class="btn-outline-primary">
+          <i class="fas fa-chalkboard-teacher"></i> Faculty Login
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Form submission handler
+    document.getElementById('userLoginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      if (!username || !password) {
+        alert('Please fill in all fields');
+        return;
+      }
+      
+      // Simulate login process
+      const loginBtn = document.querySelector('.login-btn');
+      const originalText = loginBtn.innerHTML;
+      
+      loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+      loginBtn.disabled = true;
+      
+      setTimeout(() => {
+        alert('Login successful! (This is a demo)');
+        loginBtn.innerHTML = originalText;
+        loginBtn.disabled = false;
+      }, 2000);
+    });
+
+    // Test if elements are working
+    console.log('User Login Page Loaded Successfully');
+    
+    // Ensure all inputs are focusable and working
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('focus', function() {
+        console.log('Input focused:', this.id);
+      });
+      
+      input.addEventListener('input', function() {
+        console.log('Input changed:', this.id, this.value);
+      });
+    });
+
+    // Restrict input to numbers only
+    document.getElementById('username').addEventListener('input', function(e) {
+      // Remove any non-numeric characters
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    document.getElementById('password').addEventListener('input', function(e) {
+      // Remove any non-numeric characters
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // Prevent non-numeric key presses
+    document.getElementById('username').addEventListener('keypress', function(e) {
+      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    // Test click events
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function(e) {
+        console.log('Link clicked:', this.textContent);
+      });
+    });
+
+    // Test button events
+    document.querySelectorAll('button').forEach(button => {
+      button.addEventListener('click', function(e) {
+        console.log('Button clicked:', this.textContent);
+      });
+    });
+  </script>
+</body>
+</html>
