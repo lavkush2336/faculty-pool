@@ -59,7 +59,7 @@
       width: 95%;
       height: 100%;
       object-fit: cover;
-      border: none;
+      border-right: 5px solid #8B0000;
     }
 
     .faculty-info {
