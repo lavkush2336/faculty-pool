@@ -261,7 +261,7 @@
         </div>
 
         <button type="submit" class="submit-btn">
-          <i class="fas fa-paper-plane"></i> Send Reset Link
+          <i class="fas fa-paper-plane"></i> Change Password
         </button>
       </form>
 
