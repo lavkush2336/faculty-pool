@@ -1,3 +1,7 @@
+<?php
+// forgot-password.php
+// Converted from forgot-password.html -> forgot-password.php
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,7 +131,7 @@
 
     .submit-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(139, 0, 0, 0.3);
+      box-shadow: 0 8px 25px rgba(139, 0, 0, 0.1);
     }
 
     .submit-btn:active {
@@ -248,7 +252,7 @@
       </div>
 
       <!-- Forgot Password Form -->
-      <form id="forgotPasswordForm">
+      <form id="forgotPasswordForm" method="post" action="#">
         <div class="form-group">
           <label for="email" class="form-label">
             <i class="fas fa-envelope"></i> Email Address
@@ -266,10 +270,6 @@
         <a href="faculty-login.php">
           <i class="fas fa-sign-in-alt"></i> Back to Login
         </a>
-        <!-- <span style="color: #ccc;">|</span>
-        <a href="faculty-login.html">
-          <i class="fas fa-chalkboard-teacher"></i> Faculty Login
-        </a> -->
       </div>
     </div>
   </div>
@@ -293,7 +293,7 @@
         return;
       }
       
-      // Simulate password reset process
+      // Simulate password reset process (demo)
       const submitBtn = document.querySelector('.submit-btn');
       const originalText = submitBtn.innerHTML;
       
