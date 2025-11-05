@@ -63,7 +63,7 @@
 
         <!-- Right side: Faculty -->
         <div class="flex space-x-8">
-          <a href="#" class="nav-item active">FACULTY</a>
+          <a href="faculty-member.php" class="nav-item active">FACULTY</a>
         </div>
       </div>
     </div>
