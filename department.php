@@ -1,5 +1,5 @@
 <?php
-// departments.php (final clean version - no login buttons, no "Visit Page" link)
+// departments.php (Modified for redirection to course.php)
 
 require_once 'db.php'; // must define $pdo (PDO connection)
 
@@ -12,11 +12,6 @@ function e($s) {
 $stmt = $pdo->prepare("
     SELECT id, department_name 
     FROM departments 
-    /* The original query used WHERE parent_id IS NULL and other columns (slug, dept_type, icon_class, description, display_order) 
-    which are not present in the current table structure (id, department_name). 
-    The query has been simplified to only use existing columns. 
-    If you re-add the missing columns, you should update this query.
-    */
     ORDER BY id ASC
 ");
 $stmt->execute();
@@ -75,25 +70,18 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
           </div>
         <?php else: ?>
           <?php foreach ($departments as $dept): ?>
-            <div class="dept-card" data-aos="zoom-in" data-aos-delay="100">
-              <div class="dept-icon">
-                <i class="<?php 
-                  /* The original used $dept['icon_class'] which is now missing. 
-                  Using a default icon for all departments to maintain design.
-                  */
-                  echo 'fas fa-building'; 
-                ?>"></i>
+            
+            <a href="course.php?department_id=<?php echo e($dept['id']); ?>" class="dept-link">
+              <div class="dept-card" data-aos="zoom-in" data-aos-delay="100">
+                <div class="dept-icon">
+                  <i class="fas fa-building"></i> 
+                </div>
+                <div class="dept-main">
+                  <span class="dept-name"><?php echo e($dept['department_name']); ?></span>
+                </div>
               </div>
-              <div class="dept-main">
-                <span class="dept-name"><?php echo e($dept['department_name']); ?></span>
-                <?php 
-                  /* The original used $dept['description'] which is now missing.
-                  Removed the description block to avoid errors.
-                  */
-                ?>
-              </div>
-            </div>
-          <?php endforeach; ?>
+            </a>
+            <?php endforeach; ?>
         <?php endif; ?>
       </div>
 
