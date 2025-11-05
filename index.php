@@ -100,10 +100,12 @@
             <div class="text-1xl font-semibold mb-4">"Diverse programs driving innovation and excellence"</div>
           </div>
         </a>
-        <div class="flex-card cursor-pointer">
+        <a href="faculty-login.php">
+        <div class="flex-card cursor-pointer" onclick="showPrograms(event)">
           <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-user-tie"></i></div>
           <div class="text-3xl font-semibold text-primary-400 mb-4">Teacher's Domain</div>
         </div>
+        </a>
         <div class="flex-card cursor-pointer md:col-span-2 md:w-1/2 md:mx-auto">
           <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-university"></i></div>
           <div class="text-3xl font-semibold text-primary-400 mb-4">Departments</div>

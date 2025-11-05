@@ -313,7 +313,7 @@
     </div>
 
     <!-- Back to Home Link -->
-    <a href="index.html" class="back-to-home" data-aos="fade-right">
+    <a href="index.php" class="back-to-home" data-aos="fade-right">
       <i class="fas fa-arrow-left"></i>
       <span>Back to Home</span>
     </a>
