@@ -89,7 +89,10 @@ foreach ($courses as $course) {
     }
     /* Ensure the existing .dept-card flexbox layout is used for consistency */
     .dept-card {
-        cursor: default; /* Change cursor since these are not links */
+        cursor: pointer; /* Changed to pointer as cards are now links */
+    }
+    .course-link {
+        text-decoration: none; /* Remove underline from the clickable card */
     }
   </style>
 </head>
@@ -139,15 +142,27 @@ foreach ($courses as $course) {
 
             <div class="departments-grid" id="coursesGrid">
                 <?php foreach ($semester_courses as $course): ?>
-                    <div class="dept-card" data-aos="zoom-in" data-aos-delay="100">
-                        <div class="dept-icon">
-                            <i class="fas fa-book"></i> 
+                    <?php
+                        // Encode course name for safe URL passing
+                        $urlCourseName = urlencode($course['course_name']);
+                        $urlCourseCode = urlencode($course['course_code']);
+                        
+                        // Construct the link to faculty.php
+                        $facultyLink = "faculty.php?course_name={$urlCourseName}&course_code={$urlCourseCode}&department_id={$departmentId}";
+                    ?>
+                    <!-- NEW: Wrap the card in an anchor tag -->
+                    <a href="<?php echo $facultyLink; ?>" class="course-link">
+                        <div class="dept-card" data-aos="zoom-in" data-aos-delay="100">
+                            <div class="dept-icon">
+                                <i class="fas fa-book"></i> 
+                            </div>
+                            <div class="dept-main">
+                                <span class="course-code"><?php echo e($course['course_code']); ?></span>
+                                <span class="course-name"><?php echo e($course['course_name']); ?></span>
+                            </div>
                         </div>
-                        <div class="dept-main">
-                            <span class="course-code"><?php echo e($course['course_code']); ?></span>
-                            <span class="course-name"><?php echo e($course['course_name']); ?></span>
-                        </div>
-                    </div>
+                    </a>
+                    <!-- END NEW -->
                 <?php endforeach; ?>
             </div>
         <?php endforeach; ?>
