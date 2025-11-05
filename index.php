@@ -1,3 +1,6 @@
+<?php
+// index.php - converted from index.html
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -123,7 +126,7 @@
 
   <footer class="creative-footer">
     <div class="max-w-7xl mx-auto px-4 py-8 text-center">
-      <p>&copy; 2025 Thapar Institute of Engineering & Technology. All rights reserved.</p>
+      <p>&copy; <?php echo date('Y'); ?> Thapar Institute of Engineering & Technology. All rights reserved.</p>
     </div>
   </footer>
 
