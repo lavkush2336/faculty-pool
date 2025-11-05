@@ -8,12 +8,16 @@ function e($s) {
     return htmlspecialchars($s ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-// Fetch all top-level departments
+// Fetch all top-level departments using the new column name 'department_name'
 $stmt = $pdo->prepare("
-    SELECT id, name, slug, dept_type, icon_class, description 
+    SELECT id, department_name 
     FROM departments 
-    WHERE parent_id IS NULL 
-    ORDER BY display_order ASC, id ASC
+    /* The original query used WHERE parent_id IS NULL and other columns (slug, dept_type, icon_class, description, display_order) 
+    which are not present in the current table structure (id, department_name). 
+    The query has been simplified to only use existing columns. 
+    If you re-add the missing columns, you should update this query.
+    */
+    ORDER BY id ASC
 ");
 $stmt->execute();
 $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -27,20 +31,14 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <meta name="theme-color" content="#8B0000" />
   <title>Departments - Faculty Pool</title>
 
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Custom CSS -->
   <link rel="stylesheet" href="styles.css">
-  <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <!-- AOS -->
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
 <body class="font-poppins bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
-  <!-- Navigation -->
   <nav class="creative-nav">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex justify-between items-center py-3">
@@ -52,7 +50,6 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   </nav>
 
-  <!-- Hero Section -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Departments</h1>
@@ -65,7 +62,6 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   </section>
 
-  <!-- Departments Section -->
   <section class="main-content py-8">
     <div class="max-w-7xl mx-auto px-4">
       <h2 class="section-title" data-aos="fade-up">
@@ -81,15 +77,20 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php foreach ($departments as $dept): ?>
             <div class="dept-card" data-aos="zoom-in" data-aos-delay="100">
               <div class="dept-icon">
-                <i class="<?php echo e($dept['icon_class'] ?: 'fas fa-building'); ?>"></i>
+                <i class="<?php 
+                  /* The original used $dept['icon_class'] which is now missing. 
+                  Using a default icon for all departments to maintain design.
+                  */
+                  echo 'fas fa-building'; 
+                ?>"></i>
               </div>
               <div class="dept-main">
-                <span class="dept-name"><?php echo e($dept['name']); ?></span>
-                <?php if (!empty($dept['description'])): ?>
-                  <p class="dept-desc text-sm text-slate-500 mt-2">
-                    <?php echo e($dept['description']); ?>
-                  </p>
-                <?php endif; ?>
+                <span class="dept-name"><?php echo e($dept['department_name']); ?></span>
+                <?php 
+                  /* The original used $dept['description'] which is now missing.
+                  Removed the description block to avoid errors.
+                  */
+                ?>
               </div>
             </div>
           <?php endforeach; ?>
@@ -104,14 +105,12 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   </section>
 
-  <!-- Footer -->
   <footer class="creative-footer">
     <div class="max-w-7xl mx-auto px-4 py-8 text-center">
       <p>&copy; <?php echo date('Y'); ?> Thapar Institute of Engineering & Technology. All rights reserved.</p>
     </div>
   </footer>
 
-  <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="script.js"></script>
