@@ -130,12 +130,35 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         font-size: 1.6rem;
         margin-bottom: 3px;
     }
-
+    
+    /* MODIFIED: Reduced bottom margin for h5 and h6 to tighten spacing */
     .faculty-info h5 {
         font-weight: 500;
         color: #444;
         font-size: 1rem;
-        margin-bottom: 15px;
+        margin-bottom: 5px; /* Reduced from 15px to 5px */
+    }
+
+    .faculty-info h6 {
+        font-weight: 600;
+        color: #8B0000;
+        text-transform: uppercase;
+        font-size: 0.9rem; /* Adjusted font size for title lines */
+        margin-bottom: 3px; /* Reduced from 10px to 3px */
+        margin-top: 10px;
+    }
+
+    /* Additional spacing for the specific info lines based on screenshot */
+    .faculty-info .info-line {
+        font-size: 1rem;
+        color: #333;
+        margin-bottom: 5px; /* Tight spacing between info lines */
+        display: flex;
+        align-items: center;
+    }
+
+    .expertise-container {
+        margin-top: 10px;
     }
 
     .expertise-pill {
@@ -150,6 +173,7 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         margin-bottom: 5px;
         white-space: nowrap;
     }
+    /* END MODIFIED */
 
     @media (max-width: 768px) {
         .faculty-card {
@@ -229,11 +253,21 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="faculty-info">
                         <h2><?php echo $fullName; ?></h2>
-                        <h5><i class="fas fa-building me-2"></i><?php echo e($faculty['department']); ?></h5>
+                        
+                        <!-- Department -->
+                        <div class="info-line">
+                            <i class="fas fa-building me-2 text-primary-600"></i><?php echo e($faculty['department']); ?>
+                        </div>
 
-                        <h6><i class="fas fa-envelope me-2"></i><?php echo e($faculty['email']); ?></h6>
-                        <h6><i class="fas fa-laptop-code me-2"></i>Expertise</h6>
-                        <div>
+                        <!-- Email -->
+                        <div class="info-line">
+                            <i class="fas fa-envelope me-2 text-primary-600"></i><?php echo e($faculty['email']); ?>
+                        </div>
+                        
+                        <!-- Expertise Title -->
+                        <h6 class="mt-3"><i class="fas fa-laptop-code me-2"></i>Expertise</h6>
+                        
+                        <div class="expertise-container">
                             <!-- Display expertise as pills/tags -->
                             <?php 
                             $expertiseList = explode(',', $faculty['expertise']);
