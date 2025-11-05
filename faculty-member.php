@@ -1,5 +1,5 @@
 <?php
-// all-faculty.php - Displays all faculty members in a responsive grid
+// all-faculty.php - Displays all faculty members in a responsive grid with search functionality
 
 require_once 'db.php'; // must define $pdo (PDO connection)
 
@@ -8,15 +8,32 @@ function e($s) {
     return htmlspecialchars($s ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-// 1. Fetch ALL Faculty Members
-$stmt = $pdo->prepare("
+// Check for search query
+$searchName = filter_input(INPUT_GET, 'search_name', FILTER_SANITIZE_STRING);
+$searchCondition = '';
+$searchParams = [];
+
+if ($searchName) {
+    // Modify the query to filter by name (first_name or last_name)
+    // Using CONCAT for full name search for a better user experience
+    $searchCondition = " WHERE CONCAT(F.first_name, ' ', F.last_name) LIKE :searchName OR F.last_name LIKE :searchName";
+    $searchParams = [':searchName' => '%' . $searchName . '%'];
+}
+
+// 1. Fetch Filtered Faculty Members
+$sql = "
     SELECT 
         F.faculty_id, F.first_name, F.last_name, F.email, F.expertise, F.Image, F.department
     FROM Faculty F 
+    {$searchCondition}
     ORDER BY F.department ASC, F.last_name ASC
-");
-$stmt->execute();
+";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($searchParams);
 $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$resultCount = count($facultyList);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -150,6 +167,66 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         text-transform: uppercase;
         margin-bottom: 5px;
     }
+
+    /* Search Bar Styling */
+    .search-form-container {
+        flex-grow: 1;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .search-input {
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px 0 0 8px;
+        outline: none;
+        width: 180px; /* Adjust width as needed */
+        transition: width 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .search-input:focus {
+        border-color: #8B0000;
+        width: 250px;
+    }
+
+    .search-button {
+        background-color: #8B0000;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 0 8px 8px 0;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .search-button:hover {
+        background-color: #A52A2A;
+    }
+
+    /* Responsive adjustments for navigation */
+    @media (max-width: 768px) {
+        .creative-nav .flex-wrap {
+            flex-direction: column;
+            align-items: center;
+        }
+        .creative-nav .flex.space-x-8 {
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .search-form-container {
+            width: 100%;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .search-input {
+            width: 70%;
+        }
+        .search-input:focus {
+            width: 70%; /* Keep width fixed on mobile */
+        }
+    }
     
   </style>
 </head>
@@ -158,12 +235,30 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <!-- Navigation -->
   <nav class="creative-nav">
     <div class="max-w-7xl mx-auto px-4">
-      <div class="flex justify-between items-center py-3">
+      <div class="flex justify-between items-center py-3 flex-wrap">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
           <a href="departments.php" class="nav-item">DEPARTMENTS</a>
           <a href="all-faculty.php" class="nav-item active">FACULTY</a>
         </div>
+        
+        <!-- Search Bar Form -->
+        <div class="search-form-container">
+            <form method="GET" action="all-faculty.php" class="flex">
+                <input 
+                    type="search" 
+                    name="search_name" 
+                    placeholder="Search by name..." 
+                    class="search-input"
+                    value="<?php echo e($searchName); ?>"
+                >
+                <button type="submit" class="search-button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+        <!-- End Search Bar Form -->
+
       </div>
     </div>
   </nav>
@@ -185,13 +280,21 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <section class="main-content py-8">
     <div class="max-w-7xl mx-auto px-4">
       <h2 class="section-title" data-aos="fade-up">
-        <i class="fas fa-users-viewfinder"></i> Directory (<?php echo count($facultyList); ?> Members)
+        <i class="fas fa-users-viewfinder"></i> Directory (<?php echo $resultCount; ?> Members)
+        <?php if ($searchName): ?>
+            <span class="text-lg text-gray-600 font-normal ms-2">
+                &mdash; Showing results for "**<?php echo e($searchName); ?>**"
+            </span>
+            <a href="all-faculty.php" class="text-sm text-red-600 hover:text-red-800 ms-3">
+                Clear Search
+            </a>
+        <?php endif; ?>
       </h2>
 
       <div class="faculty-grid" id="facultyGrid">
         <?php if (empty($facultyList)): ?>
           <div class="text-center text-muted py-8 col-span-full">
-            No faculty members were found in the database.
+            No faculty members were found matching your search criteria.
           </div>
         <?php else: ?>
           <?php foreach ($facultyList as $faculty): 
