@@ -230,11 +230,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* left card (vertical stacked) — match faculty-member.php look */
     .left-card { flex: 0 0 420px; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 18px 40px rgba(0,0,0,0.06); }
     .faculty-card-vertical { display:flex; flex-direction:column; align-items:stretch; }
-    .faculty-image { width:100%; height:260px; overflow:hidden; border-bottom:5px solid #8B0000; }
+    
+    /* FIX: Image container height increased by 200% (260px -> 520px) */
+    .faculty-image { width:100%; height:520px; overflow:hidden; border-bottom:5px solid #8B0000; }
+    
     .faculty-image img { 
         width:100%; 
         height:100%; 
         object-fit: cover; 
+        object-position: top center; /* Added to prioritize face alignment */
         display:block; 
         transition: transform 0.3s ease;
     }
