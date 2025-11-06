@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Nov 06, 2025 at 11:38 PM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Host: localhost
+-- Generation Time: Nov 07, 2025 at 12:36 AM
+-- Server version: 10.4.28-MariaDB
+-- PHP Version: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -39,8 +39,37 @@ CREATE TABLE `appointments` (
   `slot_time` varchar(50) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `IPAddress` varchar(255) NOT NULL,
-  `status` varchar(10) NOT NULL
+  `status` varchar(10) NOT NULL,
+  `reason1` varchar(500) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `appointments`
+--
+
+INSERT INTO `appointments` (`id`, `faculty_id`, `student_name`, `student_email`, `department`, `subgroup`, `reason`, `contact_number`, `slot_time`, `created_at`, `IPAddress`, `status`, `reason1`) VALUES
+(1, 223, 'Krish', 'kgupta60_be24@thapar.edu', 'CSE', '3C74', 'paper related', '+919876543212', '15:48:00', '2025-11-06 22:50:29', '::1', 'pending', ''),
+(2, 221, 'Divyam', 'abc@thapar.edu', 'COE', '3C43', 'other', '+918888888888', '10:00:00', '2025-11-06 23:30:17', '::1', 'Approved', ''),
+(3, 221, 'Lavkush', 'fgd@thapar.edu', 'ME', '3C74', 'doubt related', '+918787878787', '10:05:00', '2025-11-06 23:31:52', '::1', 'Declined', 'NA');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `attendance`
+--
+
+CREATE TABLE `attendance` (
+  `faculty_id` int(10) NOT NULL,
+  `Attendance` varchar(50) NOT NULL,
+  `Date` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `attendance`
+--
+
+INSERT INTO `attendance` (`faculty_id`, `Attendance`, `Date`) VALUES
+(221, 'Present', '2025-11-07');
 
 -- --------------------------------------------------------
 
@@ -1268,7 +1297,7 @@ ALTER TABLE `faculty`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `courses`
