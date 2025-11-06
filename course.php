@@ -81,18 +81,22 @@ foreach ($courses as $course) {
         font-size: 1.1rem;
         font-weight: 600;
         color: #374151; /* Darker text for the code */
+        display: block; /* MODIFIED: Force to new line */
     }
     .dept-card .course-name {
         font-size: 0.9rem;
         color: #6b7280; /* Muted text for the name */
         margin-top: 0.25rem;
+        display: block; /* MODIFIED: Force to new line */
     }
     /* Ensure the existing .dept-card flexbox layout is used for consistency */
     .dept-card {
         cursor: pointer; /* Changed to pointer as cards are now links */
+        height: 100%; /* MODIFIED: Ensure same height */
     }
     .course-link {
         text-decoration: none; /* Remove underline from the clickable card */
+        height: 100%; /* MODIFIED: Ensure link wrapper fills grid cell */
     }
   </style>
 </head>
@@ -150,7 +154,6 @@ foreach ($courses as $course) {
                         // Construct the link to faculty.php
                         $facultyLink = "faculty.php?course_name={$urlCourseName}&course_code={$urlCourseCode}&department_id={$departmentId}";
                     ?>
-                    <!-- NEW: Wrap the card in an anchor tag -->
                     <a href="<?php echo $facultyLink; ?>" class="course-link">
                         <div class="dept-card" data-aos="zoom-in" data-aos-delay="100">
                             <div class="dept-icon">
@@ -162,8 +165,7 @@ foreach ($courses as $course) {
                             </div>
                         </div>
                     </a>
-                    <!-- END NEW -->
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
             </div>
         <?php endforeach; ?>
       <?php endif; ?>

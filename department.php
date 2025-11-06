@@ -31,7 +31,17 @@ $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <link rel="stylesheet" href="styles.css">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-</head>
+
+  <style>
+    .dept-link {
+        text-decoration: none;
+        height: 100%; /* Ensure link wrapper fills grid cell */
+    }
+    .dept-card {
+        height: 100%; /* Ensure card fills the link wrapper */
+    }
+  </style>
+  </head>
 <body class="font-poppins bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
   <nav class="creative-nav">
