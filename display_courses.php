@@ -27,21 +27,24 @@ $courses = [];
 $error_message = null;
 
 // --- 3. Process Form Submission ---
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+// --- 3. Process Form Submission ---
+if ($_SERVER["REQUEST_METHOD"] == "GET") { // CHANGED from POST to GET
     // Get submitted values
-    $selected_department_name = trim($_POST['department'] ?? '');
-    $selected_semester = trim($_POST['semester'] ?? '');
+    // CHANGED from $_POST to $_GET
+    $selected_department_name = trim($_GET['department'] ?? '');
+    $selected_semester = trim($_GET['semester'] ?? '');
     
     if (empty($selected_department_name) || empty($selected_semester)) {
         $error_message = "Please select both Department and Semester.";
     } else {
         // --- 4. Fetch department_id from department_name using Prepared Statement ---
-        $stmt_dept = $conn->prepare("SELECT id FROM departments WHERE department_name = ?");
+      $stmt_dept = $conn->prepare("SELECT id FROM departments WHERE department_name LIKE ?");
         
         if ($stmt_dept === false) {
              $error_message = "Database error: Could not prepare department query.";
         } else {
-            $stmt_dept->bind_param("s", $selected_department_name);
+            $search_name = "%" . $selected_department_name . "%";
+            $stmt_dept->bind_param("s", $search_name);
             $stmt_dept->execute();
             $result_dept = $stmt_dept->get_result();
 
@@ -81,7 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 } else {
-    // Redirect if accessed directly without POST data
+    // Redirect if accessed directly without GET data
     header('Location: student.php');
     exit;
 }

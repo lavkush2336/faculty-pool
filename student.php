@@ -58,6 +58,8 @@ $conn->close();
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
   <script>
     // Re-added Tailwind config to ensure colors like 'primary-800' are defined
     tailwind.config = {
@@ -95,8 +97,6 @@ $conn->close();
         justify-content: center; /* Center horizontally */
         align-items: center;     /* Center vertically */
         min-height: 100vh;       /* Use min-height to ensure centering on full viewport */
-        /* You can remove the background-gradient class from the body tag if you want this style here instead: */
-        /* background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #eef2ff); */
     }
 
     /* Styling for the form container */
@@ -108,6 +108,8 @@ $conn->close();
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     margin: 20px 0;
+    /* ADDED: Set position relative so the back button stays inside it */
+    position: relative; 
     }
     
     /* Style adjustments for the title to match the screenshot */
@@ -125,14 +127,39 @@ $conn->close();
         background-color: #991b1b !important;
         border-color: #991b1b !important;
     }
+
+    /* --- ADDED: Styles for the Back Button (from faculty-login.php) --- */
+    .back-to-home {
+      position: absolute;
+      top: 2rem;
+      left: 2rem;
+      color: #8B0000;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .back-to-home:hover {
+      color: #A52A2A;
+      transform: translateX(-3px);
+    }
   </style>
 </head>
 <body class="font-poppins bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
   <div class="student-form-container">
+    
+    <a href="index.php" class="back-to-home" data-aos="fade-right">
+      <i class="fas fa-arrow-left"></i>
+      <span>Back to Home</span>
+    </a>
+    
     <h2 class="text-3xl font-bold text-center">Student portal</h2>
     
-    <form action="display_courses.php" method="POST">
+    <form action="display_courses.php" method="GET">
       
       <div class="mb-4">
         <label for="semester" class="form-label font-semibold">Select Semester</label>
@@ -165,5 +192,15 @@ $conn->close();
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    // ADDED: Initialize AOS
+    AOS.init({
+      duration: 800,
+      easing: 'ease-in-out',
+      once: true
+    });
+  </script>
 </body>
 </html>
