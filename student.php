@@ -62,12 +62,12 @@ $conn->close();
   <style>
     /* Tailwind Configuration from index.php */
     .student-form-container {
-      max-width: 600px;
-      margin: 50px auto;
-      padding: 30px;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 61%;
+    margin: 8% auto;
+    padding: 40px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
   </style>
 </head>
