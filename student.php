@@ -30,7 +30,6 @@ $semesters = array(
 );
 
 // Query to fetch department names from the 'departments' table
-// The table structure was shown in the uploaded image.
 $sql = "SELECT department_name FROM departments ORDER BY department_name ASC";
 $result = $conn->query($sql);
 
@@ -59,22 +58,79 @@ $conn->close();
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <script>
+    // Re-added Tailwind config to ensure colors like 'primary-800' are defined
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              600: '#dc2626',
+              700: '#b91c1c',
+              800: '#991b1b',
+              900: '#7f1d1d',
+            }
+          },
+          fontFamily: {
+            'inter': ['Inter', 'sans-serif'],
+            'poppins': ['Poppins', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
   <style>
-    /* Tailwind Configuration from index.php */
+    /* Global fixes to center content and remove scrollbars */
+    html, body {
+        height: 100%;       /* Ensure full viewport height */
+        margin: 0;          /* Remove default browser margin */
+        padding: 0;         /* Remove default browser padding */
+        overflow-x: hidden; /* Ensure no horizontal scrollbar */
+    }
+
+    /* Use Flexbox on the body to center the content (form) vertically and horizontally */
+    body {
+        display: flex;
+        justify-content: center; /* Center horizontally */
+        align-items: center;     /* Center vertically */
+        min-height: 100vh;       /* Use min-height to ensure centering on full viewport */
+        /* You can remove the background-gradient class from the body tag if you want this style here instead: */
+        /* background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #eef2ff); */
+    }
+
+    /* Styling for the form container */
     .student-form-container {
-      max-width: 61%;
-    margin: 8% auto;
-    padding: 40px;
+      max-width: 60%;
+    width: 90%;
+    padding: 63px;
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+    }
+    
+    /* Style adjustments for the title to match the screenshot */
+    .student-form-container h2 {
+        color: #B91C1C !important; /* Matches the button and image color */
+        margin-bottom: 25px; /* Increase spacing below the title */
+    }
+    
+    /* Match the color and style for the form button */
+    .btn.bg-red-700 {
+        background-color: #B91C1C !important;
+        border-color: #B91C1C !important;
+    }
+    .btn.bg-red-700:hover {
+        background-color: #991b1b !important;
+        border-color: #991b1b !important;
     }
   </style>
 </head>
 <body class="font-poppins bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
   <div class="student-form-container">
-    <h2 class="text-3xl font-bold text-center mb-6 text-red-800">Student Portal Login</h2>
+    <h2 class="text-3xl font-bold text-center">Student Portal Login</h2>
     
     <form action="student_login_process.php" method="POST">
       
