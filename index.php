@@ -51,25 +51,22 @@
     <div class="floating-square square-2"></div>
   </div>
 
-  <!-- Navigation -->
   <nav class="creative-nav">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex justify-between items-center py-3">
-        <!-- Left side: Home + Programs -->
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
           <a href="department.php" class="nav-item">PROGRAMS</a>
         </div>
 
-        <!-- Right side: Faculty -->
         <div class="flex space-x-8">
-          <a href="faculty-member.php" class="nav-item active">FACULTY</a>
+          <a href="faculty-member.php" class="nav-item">FACULTY</a>
+          <a href="student.php" class="nav-item active">STUDENT'S DOMAIN</a> 
         </div>
       </div>
     </div>
   </nav>
 
-  <!-- Hero -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Faculty Pool</h1>
@@ -89,7 +86,6 @@
     </div>
   </section>
 
-  <!-- Main content -->
   <section class="main-content">
     <div class="max-w-7xl mx-auto">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12" id="cardsView">
@@ -106,10 +102,13 @@
           <div class="text-3xl font-semibold text-primary-400 mb-4">Teacher's Domain</div>
         </div>
         </a>
-        <div class="flex-card cursor-pointer md:col-span-2 md:w-1/2 md:mx-auto">
-          <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-university"></i></div>
-          <div class="text-3xl font-semibold text-primary-400 mb-4">Departments</div>
-        </div>
+        
+        <a href="student.php" class="md:col-span-2 md:w-1/2 md:mx-auto">
+          <div class="flex-card cursor-pointer">
+            <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-user"></i></div>
+            <div class="text-3xl font-semibold text-primary-400 mb-4">Student's Domain</div>
+          </div>
+        </a>
       </div>
 
       <div class="programs-list hidden" id="programsView" data-aos="fade-up">
@@ -141,6 +140,9 @@
       const container = document.getElementById('departmentsContainer');
       container.innerHTML = '<p class="text-center">Loading departments...</p>';
       try {
+        // This function is still present but will not be triggered by the main cards area anymore,
+        // as the "Programs" link redirects directly to 'department.php'.
+        // It remains here to ensure existing functionality that might call this function is preserved.
         const res = await fetch('departments.php');
         const data = await res.json();
         container.innerHTML = '';
@@ -170,7 +172,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       AOS && AOS.init && AOS.init({ duration: 800, easing: 'ease-in-out', once: true, offset: 100 });
-      loadDepartments();
+      // loadDepartments(); // Removed direct call to align with navigation
     });
   </script>
 </body>
