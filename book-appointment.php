@@ -125,30 +125,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowedReasons = ['paper related','doubt related','project related','other'];
     if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
     
-    // --- NEW IP ADDRESS LIMIT CHECK ---
+    // --- START CONSTRAINTS CHECK ---
     if (empty($errors)) {
-        $limit = 1;
+        $limit_per_faculty = 1; // Existing: Max 1 active appointment per faculty
+        $limit_total = 5;       // NEW: Max 5 active appointments in total (across all faculty)
+        
+        // --- IP ADDRESS LIMIT CHECK (Per Faculty, Limit 1) ---
         // Count 'active' appointments (status is 'pending' or 'approved') for the current faculty from this IP
-        $stmt_count = $pdo->prepare("
+        $stmt_ip_count = $pdo->prepare("
             SELECT COUNT(*) FROM appointments 
             WHERE IPAddress = :ip 
               AND faculty_id = :faculty_id
               AND status IN ('pending', 'approved') 
         ");
-        $stmt_count->execute([':ip' => $ip_address, ':faculty_id' => $faculty_id_post]);
-        $current_bookings = $stmt_count->fetchColumn();
+        $stmt_ip_count->execute([':ip' => $ip_address, ':faculty_id' => $faculty_id_post]);
+        $ip_bookings = $stmt_ip_count->fetchColumn();
 
-        if ($current_bookings >= $limit) {
-            $errors[] = "Attempts exceeded for now, try again later. You currently have " . $current_bookings . " active appointments with this faculty.";
+        if ($ip_bookings >= $limit_per_faculty) {
+            $errors[] = "Attempts exceeded for now, try again later. (You have " . $ip_bookings . " active appointments from this device IP for this faculty.)";
+        }
+        
+        // --- STUDENT EMAIL LIMIT CHECK (Per Faculty, Limit 1) ---
+        if (empty($errors)) {
+            $stmt_email_count = $pdo->prepare("
+                SELECT COUNT(*) FROM appointments 
+                WHERE student_email = :email 
+                  AND faculty_id = :faculty_id
+                  AND status IN ('pending', 'approved') 
+            ");
+            $stmt_email_count->execute([':email' => $student_email, ':faculty_id' => $faculty_id_post]);
+            $email_bookings = $stmt_email_count->fetchColumn();
+
+            if ($email_bookings >= $limit_per_faculty) {
+                $errors[] = "Attempts exceeded for now, try again later. (You have " . $email_bookings . " active appointments with this email address for this faculty.)";
+            }
+        }
+
+        // --- NEW: COMBINED IP & EMAIL TOTAL LIMIT CHECK (Across all faculty, Limit 5) ---
+        if (empty($errors)) {
+            // Count 'active' appointments (pending or approved) for the combined IP and Email across *all* faculty
+            $stmt_total_count = $pdo->prepare("
+                SELECT COUNT(*) FROM appointments 
+                WHERE student_email = :email 
+                  AND IPAddress = :ip 
+                  AND status IN ('pending', 'approved') 
+            ");
+            $stmt_total_count->execute([':email' => $student_email, ':ip' => $ip_address]);
+            $total_bookings = $stmt_total_count->fetchColumn();
+
+            if ($total_bookings >= $limit_total) {
+                $errors[] = "Appointment limit reached! You have a total of " . $total_bookings . " active appointments across all faculty from this email/device combination.";
+            }
         }
     }
-    // --- END NEW IP ADDRESS LIMIT CHECK ---
+    // --- END CONSTRAINTS CHECK ---
 
     if (empty($errors)) {
         // --- Database Insertion (Updated to include IPAddress and status) ---
         $ins = $pdo->prepare("
             INSERT INTO appointments (
-                faculty_id, student_name, department, subgroup, reason, student_email, contact_number, slot_time, IPAddress, status
+                faculty_id, student_name,department, subgroup, reason, student_email, contact_number, slot_time, IPAddress, status
             ) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         ");
