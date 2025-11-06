@@ -101,7 +101,7 @@ $conn->close();
 
     /* Styling for the form container */
     .student-form-container {
-      max-width: 60%;
+     max-width: 60%;
     width: 90%;
     padding: 63px;
     background: #ffffff;
@@ -130,9 +130,9 @@ $conn->close();
 <body class="font-poppins bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
   <div class="student-form-container">
-    <h2 class="text-3xl font-bold text-center">Student Portal Login</h2>
+    <h2 class="text-3xl font-bold text-center">Student portal</h2>
     
-    <form action="student_login_process.php" method="POST">
+    <form action="display_courses.php" method="POST">
       
       <div class="mb-4">
         <label for="semester" class="form-label font-semibold">Select Semester</label>
@@ -157,12 +157,7 @@ $conn->close();
           <?php endif; ?>
         </select>
       </div>
-
-      <div class="mb-4">
-        <label for="student_id" class="form-label font-semibold">Roll Number / Student ID</label>
-        <input type="text" class="form-control p-2 border border-gray-300 rounded-md w-full" id="student_id" name="student_id" placeholder="Enter your Roll Number" required>
-      </div>
-
+      
       <button type="submit" class="btn bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded w-full transition duration-300">
         <i class="fas fa-sign-in-alt me-2"></i> Submit
       </button>
