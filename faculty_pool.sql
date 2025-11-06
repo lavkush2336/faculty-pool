@@ -3,11 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
-<<<<<<< HEAD
--- Generation Time: Nov 06, 2025 at 06:41 PM
-=======
--- Generation Time: Nov 06, 2025 at 06:14 PM
->>>>>>> refs/remotes/origin/main
+-- Generation Time: Nov 06, 2025 at 07:11 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -46,21 +42,6 @@ CREATE TABLE `appointments` (
   `status` varchar(10) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-<<<<<<< HEAD
-=======
---
--- Dumping data for table `appointments`
---
-
-INSERT INTO `appointments` (`id`, `faculty_id`, `student_name`, `student_email`, `department`, `subgroup`, `reason`, `contact_number`, `slot_time`, `created_at`, `IPAddress`, `status`) VALUES
-(12, 281, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'doubt related', '+918800726949', '15:27:00', '2025-11-06 16:52:43', '::1', 'pending'),
-(13, 281, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'doubt related', '+918800726949', '17:26:00', '2025-11-06 16:53:16', '::1', 'pending'),
-(14, 281, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'project related', '+918800726949', '16:10:00', '2025-11-06 16:53:49', '::1', 'pending'),
-(15, 281, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'paper related', '+918800726949', '17:26:00', '2025-11-06 16:54:10', '::1', 'pending'),
-(16, 281, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'paper related', '+918800726949', '15:34:00', '2025-11-06 16:54:35', '::1', 'pending'),
-(17, 287, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'other', '+918800726949', '10:50:00', '2025-11-06 16:56:11', '::1', 'pending');
-
->>>>>>> refs/remotes/origin/main
 -- --------------------------------------------------------
 
 --
@@ -1288,7 +1269,6 @@ ALTER TABLE `faculty`
 --
 ALTER TABLE `appointments`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `courses`
