@@ -43,7 +43,8 @@ $success = false;
 $post_data = $_POST; // Store POST data to repopulate form
 
 // Check if the database schema needs updating
-// The table structure needs to be expanded to include the new fields.
+// The table structure is expanded for new fields (student_email, contact_number, slot_time)
+// AND new fields for IP address tracking and status management (IPAddress, status).
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS appointments (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -53,10 +54,14 @@ CREATE TABLE IF NOT EXISTS appointments (
   subgroup VARCHAR(16) NOT NULL,
   reason ENUM('paper related','doubt related','project related','other') NOT NULL,
   
-  /* NEW COLUMNS ADDED HERE */
+  /* Existing NEW COLUMNS */
   student_email VARCHAR(255) NOT NULL,
   contact_number VARCHAR(15) NOT NULL, 
-  slot_time TIME NOT NULL, /* ADDED SLOT TIME */
+  slot_time TIME NOT NULL, 
+  
+  /* CUSTOM NEW COLUMNS FOR IP TRACKING AND STATUS */
+  IPAddress VARCHAR(45) NOT NULL, /* Increased size for IPv6 compatibility */
+  status ENUM('pending','approved','cancelled','done') NOT NULL DEFAULT 'pending', 
   
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -74,6 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $student_email = trim($post_data['student_email'] ?? '');
     $contact_number = trim($post_data['contact_number'] ?? '');
     $slot_time = trim($post_data['slot_time'] ?? ''); // HH:MM from form
+    
+    // CAPTURE IP ADDRESS - Use a function to get the real client IP (more robust for production)
+    // For simplicity and immediate environment, we'll use REMOTE_ADDR.
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
     // --- Validation ---
     if ($faculty_id_post !== $faculty_id) $errors[] = "Security error: Faculty ID mismatch.";
@@ -91,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Contact Number must be in the format +91XXXXXXXXXX (10 digits).";
     }
 
-    // Slot time validation
+    // Slot time validation (unchanged)
     $full_slot_time = '';
     if ($slot_time === '') {
         $errors[] = "Appointment Time is required.";
@@ -115,14 +124,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $allowedReasons = ['paper related','doubt related','project related','other'];
     if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
+    
+    // --- NEW IP ADDRESS LIMIT CHECK ---
+    if (empty($errors)) {
+        $limit = 1;
+        // Count 'active' appointments (status is 'pending' or 'approved') for the current faculty from this IP
+        $stmt_count = $pdo->prepare("
+            SELECT COUNT(*) FROM appointments 
+            WHERE IPAddress = :ip 
+              AND faculty_id = :faculty_id
+              AND status IN ('pending', 'approved') 
+        ");
+        $stmt_count->execute([':ip' => $ip_address, ':faculty_id' => $faculty_id_post]);
+        $current_bookings = $stmt_count->fetchColumn();
+
+        if ($current_bookings >= $limit) {
+            $errors[] = "Attempts exceeded for now, try again later. You currently have " . $current_bookings . " active appointments with this faculty.";
+        }
+    }
+    // --- END NEW IP ADDRESS LIMIT CHECK ---
 
     if (empty($errors)) {
-        // --- Database Insertion (Updated to include new fields) ---
+        // --- Database Insertion (Updated to include IPAddress and status) ---
         $ins = $pdo->prepare("
             INSERT INTO appointments (
-                faculty_id, student_name, department, subgroup, reason, student_email, contact_number, slot_time
+                faculty_id, student_name, department, subgroup, reason, student_email, contact_number, slot_time, IPAddress, status
             ) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         ");
         $ins->execute([
             $faculty_id_post, 
@@ -130,9 +158,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $student_department, 
             $subgroup, 
             $reason,
-            $student_email, // NEW FIELD
-            $contact_number, // NEW FIELD
-            $full_slot_time // NEW FIELD
+            $student_email, 
+            $contact_number, 
+            $full_slot_time,
+            $ip_address, // NEW FIELD
         ]);
         $success = true;
         // Clear post data on successful insertion to blank the form
@@ -389,13 +418,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($success): ?>
           <div class="success">
             <i class="fas fa-check-circle me-1"></i>Appointment booked successfully!
-            <!-- <ul style="margin:5px 0 0 0; padding-left:20px; font-size:0.9rem;">
-                <li>**Faculty:** <?php echo $faculty['full_name']; ?></li>
-                <li>**Student:** <?php echo e($post_data['student_name']); ?></li>
-                <li>**Slot Time:** <?php echo e(substr($post_data['slot_time'] ?? '', 0, 5)); ?></li>
-                <li>**Reason:** <?php echo e($post_data['reason']); ?></li>
-            </ul> -->
-          </div>
+            </div>
         <?php endif; ?>
 
         <form method="post" id="appointmentForm" novalidate>
