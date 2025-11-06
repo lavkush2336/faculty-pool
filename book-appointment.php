@@ -13,9 +13,9 @@ $faculty_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $faculty = null;
 
 if ($faculty_id) {
-    // Select the necessary fields from the Faculty table
+    // Select the necessary fields from the Faculty table, including SVH times
     $stmt = $pdo->prepare("
-        SELECT faculty_id, first_name, last_name, department, expertise, Image, email 
+        SELECT faculty_id, first_name, last_name, department, expertise, Image, email, svh_start_time, svh_end_time
         FROM Faculty 
         WHERE faculty_id = :id LIMIT 1
     ");
@@ -33,6 +33,9 @@ if (!$faculty) {
 // Consolidate name and use fallback for image
 $faculty['full_name'] = e($faculty['first_name'] . ' ' . $faculty['last_name']);
 $faculty['image_url'] = $faculty['Image'] ?: 'https://placehold.co/420x260/A52A2A/ffffff?text=Image%20Missing';
+
+// NEW: Prepare formatted SVH hours for display (HH:MM - HH:MM)
+$faculty['svh_hours_display'] = substr($faculty['svh_start_time'], 0, 5) . ' - ' . substr($faculty['svh_end_time'], 0, 5);
 
 // --- 2. Handle POST for Appointment Booking ---
 $errors = [];
@@ -53,6 +56,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   /* NEW COLUMNS ADDED HERE */
   student_email VARCHAR(255) NOT NULL,
   contact_number VARCHAR(15) NOT NULL, 
+  slot_time TIME NOT NULL, /* ADDED SLOT TIME */
   
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -69,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // NEW INPUTS
     $student_email = trim($post_data['student_email'] ?? '');
     $contact_number = trim($post_data['contact_number'] ?? '');
+    $slot_time = trim($post_data['slot_time'] ?? ''); // HH:MM from form
 
     // --- Validation ---
     if ($faculty_id_post !== $faculty_id) $errors[] = "Security error: Faculty ID mismatch.";
@@ -86,6 +91,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Contact Number must be in the format +91XXXXXXXXXX (10 digits).";
     }
 
+    // Slot time validation
+    $full_slot_time = '';
+    if ($slot_time === '') {
+        $errors[] = "Appointment Time is required.";
+    } else {
+        // Simple HH:MM check
+        if (!preg_match('/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/', $slot_time)) {
+             $errors[] = "Appointment Time is invalid. Please use HH:MM format.";
+        } else {
+            $full_slot_time = $slot_time . ':00'; // Append seconds for proper database TIME comparison
+            
+            $start = $faculty['svh_start_time'];
+            $end = $faculty['svh_end_time'];
+
+            // Time comparison works directly with HH:MM:SS strings
+            // Check if the selected time is within the range [start_time, end_time]
+            if ($full_slot_time < $start || $full_slot_time > $end) {
+                 $errors[] = "The selected time (" . e($slot_time) . ") is outside the faculty's available hours: " . e(substr($start, 0, 5)) . " to " . e(substr($end, 0, 5)) . ".";
+            }
+        }
+    }
+    
     $allowedReasons = ['paper related','doubt related','project related','other'];
     if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
 
@@ -93,9 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // --- Database Insertion (Updated to include new fields) ---
         $ins = $pdo->prepare("
             INSERT INTO appointments (
-                faculty_id, student_name, student_department, subgroup, reason, student_email, contact_number
+                faculty_id, student_name, student_department, subgroup, reason, student_email, contact_number, slot_time
             ) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $ins->execute([
             $faculty_id_post, 
@@ -104,7 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $subgroup, 
             $reason,
             $student_email, // NEW FIELD
-            $contact_number // NEW FIELD
+            $contact_number, // NEW FIELD
+            $full_slot_time // NEW FIELD
         ]);
         $success = true;
         // Clear post data on successful insertion to blank the form
@@ -285,11 +313,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="flex justify-between items-center py-3">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
-          <a href="departments.php" class="nav-item">DEPARTMENTS</a>
+          <a href="department.php" class="nav-item">DEPARTMENTS</a>
         </div>
 
         <div class="flex space-x-8">
-          <a href="all-faculty.php" class="nav-item active">FACULTY</a>
+          <a href="faculty-member.php" class="nav-item active">FACULTY</a>
         </div>
       </div>
     </div>
@@ -316,7 +344,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <div class="page-inner">
     <div class="layout">
-      <!-- LEFT CARD: FACULTY INFO (Dynamically populated) -->
       <div class="left-card" data-aos="fade-right" aria-label="Faculty Information">
         <div class="faculty-card-vertical">
           <div class="faculty-image">
@@ -334,6 +361,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div style="margin-top:10px;">
+              <div class="label-strong">Student Visiting Hours (SVH)</div>
+              <div class="faculty-special text-success font-bold" style="font-size:1rem;">
+                  <?php echo e($faculty['svh_hours_display']); ?>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
               <div class="label-strong">Email</div>
               <div class="faculty-special"><?php echo e($faculty['email'] ?? 'Not provided'); ?></div>
             </div>
@@ -341,7 +375,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
 
-      <!-- RIGHT CARD: BOOKING FORM -->
       <div class="form-card" data-aos="fade-left">
         <h4>Book Appointment</h4>
 
@@ -359,6 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <ul style="margin:5px 0 0 0; padding-left:20px; font-size:0.9rem;">
                 <li>**Faculty:** <?php echo $faculty['full_name']; ?></li>
                 <li>**Student:** <?php echo e($post_data['student_name']); ?></li>
+                <li>**Slot Time:** <?php echo e(substr($post_data['slot_time'] ?? '', 0, 5)); ?></li>
                 <li>**Reason:** <?php echo e($post_data['reason']); ?></li>
             </ul>
           </div>
@@ -372,17 +406,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="text" name="student_name" class="form-control" required value="<?php echo e($post_data['student_name'] ?? ''); ?>" placeholder="Your full name">
           </div>
 
-          <!-- NEW: Student Email Input -->
           <div class="mb-3">
             <label class="form-label">Student Email (<span class="text-red-700 font-bold">@thapar.edu required</span>)</label>
             <input type="email" name="student_email" class="form-control" required value="<?php echo e($post_data['student_email'] ?? ''); ?>" placeholder="example@thapar.edu">
           </div>
           
-          <!-- NEW: Contact Number Input -->
           <div class="mb-3">
             <label class="form-label">Contact Number (<span class="text-red-700 font-bold">+91XXXXXXXXXX required</span>)</label>
             <input type="tel" name="contact_number" class="form-control" required value="<?php echo e($post_data['contact_number'] ?? ''); ?>" 
                    pattern="^\+91[0-9]{10}$" title="Format: +91 followed by 10 digits" placeholder="+91XXXXXXXXXX">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Appointment Time (HH:MM) - <span class="text-red-700 font-bold">Must be between <?php echo substr($faculty['svh_start_time'], 0, 5) . ' and ' . substr($faculty['svh_end_time'], 0, 5); ?></span></label>
+            <input type="time" name="slot_time" class="form-control" required 
+                   value="<?php echo e($post_data['slot_time'] ?? ''); ?>" placeholder="HH:MM" 
+                   min="<?php echo substr($faculty['svh_start_time'], 0, 5); ?>" 
+                   max="<?php echo substr($faculty['svh_end_time'], 0, 5); ?>">
           </div>
           
           <div class="mb-3">
@@ -433,6 +473,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       const subgroup = this.subgroup.value.trim();
       const studentEmail = this.student_email.value.trim();
       const contactNumber = this.contact_number.value.trim();
+      const slotTime = this.slot_time.value.trim(); // NEW
+
+      // Pass PHP variables to JS for client-side validation
+      const startTime = "<?php echo substr($faculty['svh_start_time'], 0, 5); ?>"; // NEW
+      const endTime = "<?php echo substr($faculty['svh_end_time'], 0, 5); ?>"; // NEW
 
       // 1. Subgroup validation
       if (!/^[A-Za-z0-9]{4}$/.test(subgroup)) {
@@ -449,6 +494,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       // 3. Contact Number constraint validation (+91XXXXXXXXXX)
       if (!/^\+91[0-9]{10}$/.test(contactNumber)) {
         alert("Contact Number must be in the format +91XXXXXXXXXX (10 digits).");
+        e.preventDefault(); return;
+      }
+
+      // 4. Slot Time validation
+      if (slotTime === '') {
+        alert("Appointment Time is required.");
+        e.preventDefault(); return;
+      }
+
+      // Simple HH:MM string comparison is sufficient for the same day
+      if (slotTime < startTime || slotTime > endTime) {
+        alert("Appointment Time must be between " + startTime + " and " + endTime + ".");
         e.preventDefault(); return;
       }
     });
