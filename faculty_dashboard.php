@@ -1,64 +1,176 @@
 <?php
+// --- START: DEBUGGING ENABLED (TEMPORARY FIX FOR BLANK PAGE) ---
+// These three lines force PHP to show all errors on the page.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL); 
+// --- END: DEBUGGING ENABLED ---
+
 // faculty-dashboard.php - The complete working file for the refined dashboard design
 
 // -----------------------------------------------------------
-// 1. PHP SETUP & MOCK DATA & REQUEST HANDLING
+// 1. PHP SETUP & DATABASE INTEGRATION
 // -----------------------------------------------------------
 session_start();
 // In a real application, you must check for a valid session.
 // If not logged in: header('Location: faculty-login.php'); exit;
 
-// *** MOCK DATA & CONNECTION ASSUMPTIONS ***
+// Set PHP Timezone to IST (India Standard Time) for all calculations
+date_default_timezone_set('Asia/Kolkata');
+
+// ---------------------------------------------------------------------------------
+// *** DATABASE CONNECTION (MODIFIED to use mysqli approach as requested) ***
+// ---------------------------------------------------------------------------------
+$server='localhost';
+$user='root';
+$pw='';
+$db='faculty_pool';
+// Using $con for mysqli connection
+$con = mysqli_connect($server, $user, $pw, $db); 
+
+$db_error = null;
+if (mysqli_connect_errno()) {
+    $db_error = "Failed to connect to MySQL: " . mysqli_connect_error();
+}
+
 // Use session data for personalization
 $faculty_id = $_SESSION['faculty_id'] ?? 101; 
 $faculty_name = $_SESSION['faculty_name'] ?? "Dr. Sharma";
 
-// Mock Appointment Data
-$mock_appointments = [
-    [
-        'id' => 1,
-        'student_name' => 'John Doe',
-        'student_email' => 'john.add@example.com',
-        'contact' => '9876543210',
-        'time_slot' => '2023-11-15 14:00', // Example ISO format
-        'reason' => 'Discussion about project proposal',
-        'status' => 'Pending' 
-    ],
-    [
-        'id' => 2,
-        'student_name' => 'Jane Smith',
-        'student_email' => 'jane.s@example.com',
-        'contact' => '9988776655',
-        'time_slot' => '2023-11-15 16:30',
-        'reason' => 'Review of Thesis Chapter 1',
-        'status' => 'Pending'
-    ],
-];
+$appointments = []; // Array to hold fetched and processed appointments
 
+
+/**
+ * Fetches and processes appointments based on status, applying a wider IST cutoff
+ * to ensure display in test environments. Filters out appointments older than 30 days.
+ */
+function fetchAppointments($con, $faculty_id) {
+    global $db_error;
+    
+    // 1. Calculate the IST cutoff timestamp (30 Days Ago Midnight IST).
+    $ist_cutoff_timestamp = strtotime('-30 days midnight');
+    
+    // 2. SQL Query: Fetch all Pending and Approved appointments for the faculty member.
+    // WARNING: This query is *NOT* using prepared statements, which is a SECURITY RISK (SQL Injection).
+    $sql = "
+        SELECT 
+            id, student_name, student_email, contact_number, reason, slot_time, status 
+        FROM appointments 
+        WHERE 
+            faculty_id = '$faculty_id' 
+            AND status IN ('pending', 'approved')
+        ORDER BY slot_time ASC
+    ";
+    
+    $result = mysqli_query($con, $sql);
+    
+    if (!$result) {
+        error_log("Appointment Fetch Error: " . mysqli_error($con));
+        $db_error = "Could not fetch appointments: Database error. Check logs for details."; 
+        return [];
+    }
+    
+    $raw_appointments = [];
+    while ($row = mysqli_fetch_assoc($result)) {
+        $raw_appointments[] = $row;
+    }
+    
+    $filtered_appointments = [];
+    $ist_timezone = new DateTimeZone('Asia/Kolkata');
+    $gmt_timezone = new DateTimeZone('GMT');
+
+    // 3. Process, Convert Time Zones, and Apply Cutoff Filter
+    foreach ($raw_appointments as $appt) {
+        // Ensure slot_time is not empty or invalid before attempting DateTime conversion
+        if (empty($appt['slot_time'])) {
+            error_log("Missing slot_time for Appointment #{$appt['id']}");
+            continue; 
+        }
+        
+        try {
+            // Get the slot time as a DateTime object (it's stored in GMT/UTC in the DB)
+            $gmt_time = new DateTime($appt['slot_time'], $gmt_timezone);
+            
+            // Convert the scheduled time to IST for comparison and display
+            $ist_time = clone $gmt_time;
+            $ist_time->setTimezone($ist_timezone);
+            
+            // Apply the **LOOSE** cutoff filter (last 30 days).
+            if ($ist_time->getTimestamp() >= $ist_cutoff_timestamp) {
+                
+                $appt['time_slot_ist'] = $ist_time->format('Y-m-d H:i'); // Format for display
+                $filtered_appointments[] = $appt;
+            }
+            
+        } catch (Exception $e) {
+            // Log issues with date parsing if any
+            error_log("Date Parsing Error for Appointment #{$appt['id']}: " . $e->getMessage());
+        }
+    }
+    
+    return $filtered_appointments;
+}
+
+// Logic to call the fetching function
+if (isset($con) && !$db_error) {
+    $appointments = fetchAppointments($con, $faculty_id);
+} else {
+    // If $con is not set, or there was a connection error
+    $db_error = $db_error ?? "Database connection (\$con) not found or failed.";
+}
+
+
+// -----------------------------------------------------------
 // --- Handle AJAX/POST Requests for Actions (Attendance, Accept, Decline) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
     header('Content-Type: application/json');
-    $response = ['success' => false, 'message' => 'Invalid action or missing parameters.'];
+    $response = ['success' => false, 'message' => 'Action failed.'];
 
-    $action = $_POST['action'] ?? '';
+    $action = $_POST['action'];
     $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : null;
+
+    // Use $con defined above for actions
+    if (!isset($con) || $db_error) {
+        echo json_encode(['success' => false, 'message' => 'Database connection unavailable for action.']);
+        exit;
+    }
+    
+    // Escape variables to mitigate the risk from direct substitution (STILL INSECURE)
+    $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
+    $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
+
 
     if ($action === 'mark_attendance' && isset($_POST['status'])) {
         $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING); 
-        // Implement Real DB INSERT/UPDATE for Attendance here
-        $response = ['success' => true, 'message' => "Attendance marked as **$status** for **$faculty_name**."];
+        // NOTE: Attendance logic is mocked for functional testing.
+        $response = ['success' => true, 'message' => "Attendance marked as **$status**."];
 
     } elseif ($action === 'accept_appointment' && $appointment_id) {
-        // Implement Real DB UPDATE for Appointment Status='Accepted' here
-        $response = ['success' => true, 'message' => "Appointment #$appointment_id accepted!"];
+        // *** CORE FUNCTIONALITY: SET STATUS TO 'Approved' ***
+        $sql = "UPDATE appointments SET status = 'Approved' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
+        if (mysqli_query($con, $sql)) {
+            $response = ['success' => true, 'message' => "Appointment #$appointment_id Approved!"];
+        } else {
+            error_log("Accept Error: " . mysqli_error($con));
+            $response['message'] = 'Accept failed: SQL Error. Error: ' . mysqli_error($con);
+        }
 
     } elseif ($action === 'decline_appointment' && $appointment_id && isset($_POST['reason'])) {
         $reason = filter_input(INPUT_POST, 'reason', FILTER_SANITIZE_STRING);
         if (empty($reason)) {
             $response = ['success' => false, 'message' => 'Decline reason cannot be empty.'];
         } else {
-            // Implement Real DB UPDATE for Appointment Status='Declined' and save reason here
-            $response = ['success' => true, 'message' => "Appointment #$appointment_id declined. Reason: $reason"];
+            // Escape reason for security (STILL INSECURE without proper prepared statements)
+            $safe_reason = mysqli_real_escape_string($con, $reason);
+            
+            // *** CORE FUNCTIONALITY: SET STATUS TO 'Declined' ***
+            $sql = "UPDATE appointments SET status = 'Declined', reason = '$safe_reason' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
+            if (mysqli_query($con, $sql)) {
+                 $response = ['success' => true, 'message' => "Appointment #$appointment_id Declined. Reason saved."];
+            } else {
+                error_log("Decline Error: " . mysqli_error($con));
+                $response['message'] = 'Decline failed: SQL Error. Error: ' . mysqli_error($con);
+            }
         }
     }
 
@@ -84,6 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --main-bg: #f8f9fa; 
             --card-bg: #ffffff;
             --pending-color: orange;
+            --approved-color: #198754; /* Bootstrap success green */
+            --danger-color: #dc3545; /* Bootstrap danger red */
         }
         
         body {
@@ -140,19 +254,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         #attendance-card {
             text-align: center;
         }
-        #attendance-card .present-icon {
-            font-size: 3rem;
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
         #attendance-card h4 {
             font-weight: 600;
             margin-bottom: 20px;
             color: #333;
-        }
-        .attendance-radio-group label {
-            font-weight: 600;
-            color: var(--primary-color);
         }
         
         .btn-theme {
@@ -165,6 +270,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: #A52A2A;
             color: #fff;
         }
+
+        /* Custom Radio Button Colors (Matching text colors) */
+        .attendance-radio-group .form-check-input:checked[value="Present"] {
+            background-color: var(--approved-color);
+            border-color: var(--approved-color);
+        }
+        .attendance-radio-group .form-check-input:checked[value="On Leave"] {
+            background-color: var(--pending-color);
+            border-color: var(--pending-color);
+        }
+        .attendance-radio-group .form-check-input:checked[value="Sick"] {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+
 
         /* Appointment Card Specifics */
         .appointment-stack {
@@ -181,13 +301,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             position: absolute;
             top: 15px;
             right: 15px;
-            background-color: var(--pending-color);
-            color: white;
             padding: 2px 8px;
             border-radius: 5px;
             font-size: 0.8rem;
             font-weight: 600;
+            color: white;
         }
+        .status-badge-pending { background-color: var(--pending-color); } /* Added status-badge-pending class */
+        .status-badge-approved { background-color: var(--approved-color); } /* Added status-badge-approved class */
         
         .appointment-stack p {
             margin-bottom: 4px;
@@ -200,26 +321,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #333;
             font-weight: 600;
         }
-        .appointment-stack h6 {
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 15px;
-        }
         
-        /* Modal Styling to match the decline dialog box image */
-        #declineModal .modal-content {
-            border-radius: 15px;
-            border: none;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
+        /* Modal Styling */
         #declineModal .modal-header {
             background-color: var(--primary-color);
             color: white;
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-            font-weight: 600;
         }
-        #declineModal .btn-danger {
+        /* Make Decline button red but the Submit Reason button theme colored */
+        #declineModal .modal-footer .btn-danger {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
         }
@@ -240,6 +349,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </header>
 
 <div class="container-fluid content-area">
+    <?php if (isset($db_error) && $db_error): ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($db_error) ?></div>
+    <?php endif; ?>
     <div class="row">
         
         <div class="col-12 col-md-4 mb-4">
@@ -251,15 +363,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="mb-4 attendance-radio-group">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="status" id="statusPresent" value="Present" required>
-                            <label class="form-check-label text-success" for="statusPresent">Present</label>
+                            <label class="form-check-label text-success" for="statusPresent">
+                                <i class="fas fa-user-check me-1"></i> Present
+                            </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="status" id="statusLeave" value="On Leave">
-                            <label class="form-check-label text-warning" for="statusLeave">On Leave</label>
+                            <label class="form-check-label text-warning" for="statusLeave">
+                                <i class="fas fa-house-user me-1"></i> On Leave
+                            </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="status" id="statusSick" value="Sick">
-                            <label class="form-check-label text-danger" for="statusSick">Sick</label>
+                            <label class="form-check-label text-danger" for="statusSick">
+                                <i class="fas fa-bed me-1"></i> Sick
+                            </label>
                         </div>
                     </div>
 
@@ -276,25 +394,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h4 class="text-start">Student Appointments</h4>
                 
                 <div id="appointment-list">
-                    <?php if (empty($mock_appointments)): ?>
-                        <div class="alert alert-info text-center">No pending appointments found.</div>
+                    <?php if (empty($appointments)): ?>
+                        <div class="alert alert-info text-center">No pending or approved appointments found in the last 30 days.</div>
                     <?php else: ?>
-                        <?php foreach ($mock_appointments as $appointment): ?>
+                        <?php foreach ($appointments as $appointment): ?>
                         <div class="appointment-stack" data-appointment-id="<?= $appointment['id'] ?>">
-                            <span class="status-badge">Pending</span>
+                            <span class="status-badge status-badge-<?= strtolower(htmlspecialchars($appointment['status'])) ?>">
+                                <?= htmlspecialchars($appointment['status']) ?>
+                            </span>
+                            
                             <p><strong>Student Name:</strong> <?= htmlspecialchars($appointment['student_name']) ?></p>
                             <p><strong>Email:</strong> <a href="mailto:<?= htmlspecialchars($appointment['student_email']) ?>"><?= htmlspecialchars($appointment['student_email']) ?></a></p>
-                            <p><strong>Contact:</strong> <?= htmlspecialchars($appointment['contact']) ?></p>
+                            <p><strong>Contact:</strong> <?= htmlspecialchars($appointment['contact_number']) ?></p> 
                             <p><strong>Reason:</strong> <?= htmlspecialchars($appointment['reason']) ?></p>
-                            <p><strong>Time Slot:</strong> <?= date('Y-m-d H:i', strtotime($appointment['time_slot'])) ?></p>
+                            <p><strong>Time Slot (IST):</strong> <?= htmlspecialchars($appointment['time_slot_ist']) ?></p> 
 
                             <div class="mt-3 d-flex justify-content-end gap-2">
+                                <?php if (strtolower($appointment['status']) === 'pending'): ?>
                                 <button class="btn btn-success btn-sm appointment-action" data-action="accept" data-id="<?= $appointment['id'] ?>">
-                                    Accept
+                                    <i class="fas fa-check me-1"></i> Accept
                                 </button>
                                 <button class="btn btn-danger btn-sm appointment-action" data-action="decline-prep" data-id="<?= $appointment['id'] ?>" data-bs-toggle="modal" data-bs-target="#declineModal">
-                                    Decline
+                                    <i class="fas fa-times me-1"></i> Decline
                                 </button>
+                                <?php else: ?>
+                                <span class="badge bg-success p-2"><i class="fas fa-calendar-check me-1"></i> Approved</span>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
@@ -310,7 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="declineModalLabel">Reason for Declining Appointment</h5>
+                <h5 class="modal-title" id="declineModalLabel"><i class="fas fa-exclamation-triangle me-2"></i> Reason for Declining Appointment</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="declineForm">
@@ -353,6 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             messageElement.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
 
             try {
+                // Submit the form data to the same PHP file
                 const response = await fetch('faculty-dashboard.php', {
                     method: 'POST',
                     body: formData
@@ -363,19 +489,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     messageElement.className = 'mt-3 text-center alert alert-success py-2';
                     
                     if (appointmentId !== null) {
-                        const stackToRemove = document.querySelector(`.appointment-stack[data-appointment-id="${appointmentId}"]`);
-                        if (stackToRemove) {
-                            stackToRemove.style.opacity = '0';
+                        const stackToUpdate = document.querySelector(`.appointment-stack[data-appointment-id="${appointmentId}"]`);
+                        
+                        // Handle Accept action: change status badge and remove buttons
+                        if (action === 'accept_appointment' && stackToUpdate) {
+                            const badge = stackToUpdate.querySelector('.status-badge');
+                            badge.textContent = 'Approved';
+                            badge.className = 'status-badge status-badge-approved'; // Use lowercase for class
+                            
+                            const buttonsContainer = stackToUpdate.querySelector('.justify-content-end');
+                            if (buttonsContainer) {
+                                buttonsContainer.innerHTML = '<span class="badge bg-success p-2"><i class="fas fa-calendar-check me-1"></i> Approved</span>';
+                            }
+                        }
+                         // Handle Decline action: remove the card visually
+                        else if (action === 'decline_appointment' && stackToUpdate) {
+                            stackToUpdate.style.opacity = '0';
                             setTimeout(() => { 
-                                stackToRemove.remove();
-                                // If no more appointments, show a success message
+                                stackToUpdate.remove();
+                                // If no more appointments, show a message
                                 if (appointmentList.children.length === 0) {
-                                    appointmentList.innerHTML = '<div class="alert alert-success text-center">All pending appointments have been processed!</div>';
+                                    appointmentList.innerHTML = '<div class="alert alert-info text-center">No pending or approved appointments found in the last 30 days.</div>';
                                 }
                             }, 300);
                         }
                     }
                 } else {
+                    // Display the detailed error message returned from the PHP backend
                     messageElement.className = 'mt-3 text-center alert alert-danger py-2';
                 }
                 messageElement.textContent = result.message;
@@ -383,7 +523,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (error) {
                 console.error('AJAX Error:', error);
                 messageElement.className = 'mt-3 text-center alert alert-danger py-2';
-                messageElement.textContent = 'A network error occurred. Check console.';
+                messageElement.textContent = 'A network error occurred. Check console for details.';
             }
 
             // Hide the message after 5 seconds for attendance/general feedback
@@ -394,7 +534,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // --- 1. Attendance Form Handler ---
+        // --- 1. Attendance Form Handler (Present/Leave/Sick) ---
         attendanceForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -447,6 +587,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     });
 </script>
-
 </body>
 </html>
