@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['logged_in'] = true;
 
                     // Redirect to the faculty dashboard
-                    header('Location: index.php'); 
+                    header('Location: faculty_dashboard.php'); 
                     exit;
                 }
             }
