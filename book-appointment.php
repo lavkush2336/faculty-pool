@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // --- Database Insertion (Updated to include new fields) ---
         $ins = $pdo->prepare("
             INSERT INTO appointments (
-                faculty_id, student_name, student_department, subgroup, reason, student_email, contact_number, slot_time
+                faculty_id, student_name, department, subgroup, reason, student_email, contact_number, slot_time
             ) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
@@ -389,12 +389,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($success): ?>
           <div class="success">
             <i class="fas fa-check-circle me-1"></i>Appointment booked successfully!
-            <ul style="margin:5px 0 0 0; padding-left:20px; font-size:0.9rem;">
+            <!-- <ul style="margin:5px 0 0 0; padding-left:20px; font-size:0.9rem;">
                 <li>**Faculty:** <?php echo $faculty['full_name']; ?></li>
                 <li>**Student:** <?php echo e($post_data['student_name']); ?></li>
                 <li>**Slot Time:** <?php echo e(substr($post_data['slot_time'] ?? '', 0, 5)); ?></li>
                 <li>**Reason:** <?php echo e($post_data['reason']); ?></li>
-            </ul>
+            </ul> -->
           </div>
         <?php endif; ?>
 
