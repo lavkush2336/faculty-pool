@@ -18,6 +18,9 @@ session_start();
 // Set PHP Timezone to IST (India Standard Time) for all calculations
 date_default_timezone_set('Asia/Kolkata');
 
+// --- Check if attendance should be disabled (before 10:30 AM IST) ---
+$isAttendanceDisabled = (time() > strtotime('today 10:30'));
+
 // ---------------------------------------------------------------------------------
 // *** DATABASE CONNECTION (MODIFIED to use mysqli approach as requested) ***
 // ---------------------------------------------------------------------------------
@@ -121,65 +124,106 @@ if (isset($con) && !$db_error) {
 
 
 // -----------------------------------------------------------
-// --- Handle AJAX/POST Requests for Actions (Attendance, Accept, Decline) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
-    header('Content-Type: application/json');
-    $response = ['success' => false, 'message' => 'Action failed.'];
+// --- REMOVED: POST REQUEST HANDLER ---
+// -----------------------------------------------------------
+// The POST handler block was here, but has been removed.
 
-    $action = $_POST['action'];
-    $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : null;
 
-    // Use $con defined above for actions
-    if (!isset($con) || $db_error) {
-        echo json_encode(['success' => false, 'message' => 'Database connection unavailable for action.']);
-        exit;
-    }
+// -----------------------------------------------------------
+// --- MODIFIED: HANDLER FOR ALL GET ACTIONS ---
+// -----------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET['action'])) {
     
-    // Escape variables to mitigate the risk from direct substitution (STILL INSECURE)
-    $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
+    $action = $_GET['action'];
     $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
 
-
-    if ($action === 'mark_attendance' && isset($_POST['status'])) {
-        $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING); 
-        // NOTE: Attendance logic is mocked for functional testing.
-        $response = ['success' => true, 'message' => "Attendance marked as **$status**."];
-
-    } elseif ($action === 'accept_appointment' && $appointment_id) {
-        // *** CORE FUNCTIONALITY: SET STATUS TO 'Approved' ***
-        $sql = "UPDATE appointments SET status = 'Approved' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
-        if (mysqli_query($con, $sql)) {
-            $response = ['success' => true, 'message' => "Appointment #$appointment_id Approved!"];
+    // Check for database connection
+    if (!isset($con) || $db_error) {
+        $db_error = "Database connection unavailable for action.";
+    } 
+    
+    // --- 1. Handle 'accept_appointment' ---
+    elseif ($action === 'accept_appointment' && isset($_GET['appointment_id'])) {
+        
+        $appointment_id = (int)$_GET['appointment_id'];
+        
+        if (!$appointment_id) {
+            $db_error = 'Error: Missing appointment ID for GET action.';
         } else {
-            error_log("Accept Error: " . mysqli_error($con));
-            $response['message'] = 'Accept failed: SQL Error. Error: ' . mysqli_error($con);
-        }
-
-    } elseif ($action === 'decline_appointment' && $appointment_id && isset($_POST['reason'])) {
-        $reason = filter_input(INPUT_POST, 'reason', FILTER_SANITIZE_STRING);
-        if (empty($reason)) {
-            $response = ['success' => false, 'message' => 'Decline reason cannot be empty.'];
-        } else {
-            // Escape reason for security (STILL INSECURE without proper prepared statements)
-            $safe_reason = mysqli_real_escape_string($con, $reason);
+            $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
+            $sql = "UPDATE appointments SET status = 'Approved' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
             
-            // *** CORE FUNCTIONALITY: SET STATUS TO 'Declined' ***
-            $sql = "UPDATE appointments SET status = 'Declined', reason = '$safe_reason' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
             if (mysqli_query($con, $sql)) {
-                 $response = ['success' => true, 'message' => "Appointment #$appointment_id Declined. Reason saved."];
+                header('Location: faculty_dashboard.php'); // Reload page
+                exit;
             } else {
-                error_log("Decline Error: " . mysqli_error($con));
-                $response['message'] = 'Decline failed: SQL Error. Error: ' . mysqli_error($con);
+                error_log("Accept Error (GET): " . mysqli_error($con));
+                $db_error = 'Accept failed (GET): SQL Error. Check logs.';
             }
         }
     }
+    
+    // --- 2. Handle 'decline_appointment' ---
+    elseif ($action === 'decline_appointment' && isset($_GET['appointment_id']) && isset($_GET['reason'])) {
+        
+        $appointment_id = (int)$_GET['appointment_id'];
+        $reason = filter_input(INPUT_GET, 'reason', FILTER_SANITIZE_STRING);
 
-    echo json_encode($response);
-    exit; 
+        if (empty($reason)) {
+            $db_error = 'Decline reason cannot be empty.';
+        } elseif (!$appointment_id) {
+            $db_error = 'Error: Missing appointment ID for decline.';
+        } else {
+            $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
+            $safe_reason = mysqli_real_escape_string($con, $reason);
+            
+            $sql = "UPDATE appointments SET status = 'Declined', reason1 = '$safe_reason' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
+            if (mysqli_query($con, $sql)) {
+                 header('Location: faculty_dashboard.php'); // Reload page
+                 exit;
+            } else {
+                error_log("Decline Error (GET): " . mysqli_error($con));
+                $db_error = 'Decline failed (GET): SQL Error.';
+            }
+        }
+    }
+    
+    // --- 3. Handle 'mark_attendance' ---
+    elseif ($action === 'mark_attendance' && isset($_GET['status'])) {
+        
+        if ($isAttendanceDisabled) {
+            $db_error = 'Attendance can only be marked before 10:30 AM.';
+        } else {
+            $status = filter_input(INPUT_GET, 'status', FILTER_SANITIZE_STRING); 
+            // NOTE: Attendance logic is mocked.
+            // In a real app, you would save this to the database.
+            // For this example, we just reload.
+            
+            // Set a temporary success message in the session (optional)
+            $_SESSION['temp_message'] = "Attendance marked as $status.";
+            $current_date = date('Y-m-d');
+            $sql="INSERT INTO `attendance`(`faculty_id`, `Attendance`, `Date`) VALUES ('$faculty_id','$status','$current_date')";
+            $result=mysqli_query($con,$sql);
+            header('Location: faculty_dashboard.php'); // Reload page
+            exit;
+        }
+    }
 }
+// --- END: GET HANDLER ---
+// -----------------------------------------------------------
+
+
 // -----------------------------------------------------------
 // 2. HTML STRUCTURE (Main Page Content)
 // -----------------------------------------------------------
+
+// Check for and display temporary messages (e.g., from attendance)
+$temp_message = null;
+if (isset($_SESSION['temp_message'])) {
+    $temp_message = $_SESSION['temp_message'];
+    unset($_SESSION['temp_message']); // Clear it after reading
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -349,42 +393,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
 </header>
 
 <div class="container-fluid content-area">
+
     <?php if (isset($db_error) && $db_error): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($db_error) ?></div>
     <?php endif; ?>
+    
+    <?php if (isset($temp_message) && $temp_message): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($temp_message) ?></div>
+    <?php endif; ?>
+
     <div class="row">
         
         <div class="col-12 col-md-4 mb-4">
             <div id="attendance-card" class="custom-card">
                 <h4>Mark Your Attendance</h4>
-                <form id="attendanceForm">
-                    <input type="hidden" name="action" value="mark_attendance">
+                
+                <form id="attendanceForm" method="GET">
                     
-                    <div class="mb-4 attendance-radio-group">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="status" id="statusPresent" value="Present" required>
-                            <label class="form-check-label text-success" for="statusPresent">
-                                <i class="fas fa-user-check me-1"></i> Present
-                            </label>
+                    <fieldset <?php if ($isAttendanceDisabled) echo 'disabled'; ?>>
+                        <input type="hidden" name="action" value="mark_attendance">
+                        
+                        <div class="mb-4 attendance-radio-group">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="statusPresent" value="Present" required>
+                                <label class="form-check-label text-success" for="statusPresent">
+                                    <i class="fas fa-user-check me-1"></i> Present
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="statusLeave" value="On Leave">
+                                <label class="form-check-label text-warning" for="statusLeave">
+                                    <i class="fas fa-house-user me-1"></i> On Leave
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="statusSick" value="Sick">
+                                <label class="form-check-label text-danger" for="statusSick">
+                                    <i class="fas fa-bed me-1"></i> Sick
+                                </label>
+                            </div>
                         </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="status" id="statusLeave" value="On Leave">
-                            <label class="form-check-label text-warning" for="statusLeave">
-                                <i class="fas fa-house-user me-1"></i> On Leave
-                            </label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="status" id="statusSick" value="Sick">
-                            <label class="form-check-label text-danger" for="statusSick">
-                                <i class="fas fa-bed me-1"></i> Sick
-                            </label>
-                        </div>
-                    </div>
 
-                    <button type="submit" class="btn btn-theme w-100">
-                        <i class="fas fa-check-circle me-2"></i> Mark Attendance
-                    </button>
-                    <div id="attendanceMessage" class="mt-3" style="display:none;"></div>
+                        <button type="submit" class="btn btn-theme w-100">
+                            <i class="fas fa-check-circle me-2"></i> Mark Attendance
+                        </button>
+                    </fieldset>
+
+
+                    <?php if ($isAttendanceDisabled): ?>
+                        <div id="attendanceMessage" class="mt-3 alert alert-warning py-2">
+                            Attendance marking is closed for today (10:30 AM cutoff).
+                        </div>
+                    <?php else: ?>
+                        <div id="attendanceMessage" class="mt-3" style="display:none;"></div>
+                    <?php endif; ?>
                 </form>
             </div>
         </div>
@@ -411,9 +473,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
 
                             <div class="mt-3 d-flex justify-content-end gap-2">
                                 <?php if (strtolower($appointment['status']) === 'pending'): ?>
-                                <button class="btn btn-success btn-sm appointment-action" data-action="accept" data-id="<?= $appointment['id'] ?>">
+                                
+                                <a href="faculty_dashboard.php?action=accept_appointment&appointment_id=<?= $appointment['id'] ?>" class="btn btn-success btn-sm">
                                     <i class="fas fa-check me-1"></i> Accept
-                                </button>
+                                </a>
+                                
                                 <button class="btn btn-danger btn-sm appointment-action" data-action="decline-prep" data-id="<?= $appointment['id'] ?>" data-bs-toggle="modal" data-bs-target="#declineModal">
                                     <i class="fas fa-times me-1"></i> Decline
                                 </button>
@@ -438,7 +502,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
                 <h5 class="modal-title" id="declineModalLabel"><i class="fas fa-exclamation-triangle me-2"></i> Reason for Declining Appointment</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="declineForm">
+            
+            <form id="declineForm" method="GET">
                 <input type="hidden" name="action" value="decline_appointment">
                 <input type="hidden" name="appointment_id" id="declineAppointmentId">
                 <div class="modal-body">
@@ -460,131 +525,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const declineModal = document.getElementById('declineModal');
-        const declineForm = document.getElementById('declineForm');
-        const attendanceForm = document.getElementById('attendanceForm');
         const appointmentList = document.getElementById('appointment-list');
-        const declineModalInstance = bootstrap.Modal.getOrCreateInstance(declineModal);
 
-        /**
-         * Generic function to handle all AJAX form submissions
-         */
-        async function submitAction(formData, messageElementId, appointmentId = null) {
-            const messageElement = document.getElementById(messageElementId);
-            const action = formData.get('action');
-
-            messageElement.style.display = 'block';
-            messageElement.className = 'mt-3 text-center alert alert-info py-2';
-            messageElement.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
-
-            try {
-                // Submit the form data to the same PHP file
-                const response = await fetch('faculty-dashboard.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-
-                if (result.success) {
-                    messageElement.className = 'mt-3 text-center alert alert-success py-2';
-                    
-                    if (appointmentId !== null) {
-                        const stackToUpdate = document.querySelector(`.appointment-stack[data-appointment-id="${appointmentId}"]`);
-                        
-                        // Handle Accept action: change status badge and remove buttons
-                        if (action === 'accept_appointment' && stackToUpdate) {
-                            const badge = stackToUpdate.querySelector('.status-badge');
-                            badge.textContent = 'Approved';
-                            badge.className = 'status-badge status-badge-approved'; // Use lowercase for class
-                            
-                            const buttonsContainer = stackToUpdate.querySelector('.justify-content-end');
-                            if (buttonsContainer) {
-                                buttonsContainer.innerHTML = '<span class="badge bg-success p-2"><i class="fas fa-calendar-check me-1"></i> Approved</span>';
-                            }
-                        }
-                         // Handle Decline action: remove the card visually
-                        else if (action === 'decline_appointment' && stackToUpdate) {
-                            stackToUpdate.style.opacity = '0';
-                            setTimeout(() => { 
-                                stackToUpdate.remove();
-                                // If no more appointments, show a message
-                                if (appointmentList.children.length === 0) {
-                                    appointmentList.innerHTML = '<div class="alert alert-info text-center">No pending or approved appointments found in the last 30 days.</div>';
-                                }
-                            }, 300);
-                        }
-                    }
-                } else {
-                    // Display the detailed error message returned from the PHP backend
-                    messageElement.className = 'mt-3 text-center alert alert-danger py-2';
-                }
-                messageElement.textContent = result.message;
-
-            } catch (error) {
-                console.error('AJAX Error:', error);
-                messageElement.className = 'mt-3 text-center alert alert-danger py-2';
-                messageElement.textContent = 'A network error occurred. Check console for details.';
-            }
-
-            // Hide the message after 5 seconds for attendance/general feedback
-            if (action === 'mark_attendance') {
-                setTimeout(() => {
-                    messageElement.style.display = 'none';
-                }, 5000);
-            }
-        }
-
-        // --- 1. Attendance Form Handler (Present/Leave/Sick) ---
-        attendanceForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            submitAction(formData, 'attendanceMessage');
-        });
-
-        // --- 2. Appointment Action Handler (Accept/Decline Prep) ---
+        // --- Appointment Action Handler (Decline Prep) ---
+        // This is the *only* JavaScript needed now.
+        // It catches the click on the "Decline" button simply
+        // to set the hidden 'appointment_id' field in the modal
+        // before the modal opens.
         appointmentList.addEventListener('click', function(e) {
             const button = e.target.closest('.appointment-action');
             if (!button) return;
 
-            const appointmentId = button.getAttribute('data-id');
             const action = button.getAttribute('data-action');
 
-            if (action === 'accept') {
-                const formData = new FormData();
-                formData.append('action', 'accept_appointment');
-                formData.append('appointment_id', appointmentId);
-                
-                // Use the attendance message space for general success feedback
-                submitAction(formData, 'attendanceMessage', appointmentId); 
-
-            } else if (action === 'decline-prep') {
+            if (action === 'decline-prep') {
+                const appointmentId = button.getAttribute('data-id');
                 // Prepare the modal before it opens
                 document.getElementById('declineAppointmentId').value = appointmentId;
                 document.getElementById('declineReason').value = ''; 
                 document.getElementById('declineMessage').style.display = 'none';
             }
         });
-
-        // --- 3. Decline Form Handler (Inside Modal) ---
-        declineForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const appointmentId = formData.get('appointment_id');
-            
-            if (formData.get('reason').trim() === '') {
-                 document.getElementById('declineMessage').className = 'mt-3 text-center alert alert-warning py-2';
-                 document.getElementById('declineMessage').textContent = 'Please provide a valid reason.';
-                 document.getElementById('declineMessage').style.display = 'block';
-                 return;
-            }
-
-            submitAction(formData, 'declineMessage', appointmentId).then(() => {
-                // Close modal if the submission was successful
-                if (document.getElementById('declineMessage').classList.contains('alert-success')) {
-                    setTimeout(() => { declineModalInstance.hide(); }, 800); 
-                }
-            });
-        });
+        
+        // All other JavaScript (submitAction function, form submit handlers)
+        // has been removed as it's no longer needed.
     });
 </script>
 </body>
