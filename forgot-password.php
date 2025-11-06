@@ -21,8 +21,8 @@ function sendemail_verify($email, $otp)
         $mail->SMTPAuth   = true;
         $mail->Username   = 'facultypoolthapar@gmail.com';     // Your email
         $mail->Password   = 'xrpvcgnjkqofjlta';   // ⚠️ MUST BE YOUR 16-DIGIT APP PASSWORD
-        $mail->SMTPSecure = 'tls';
-        $mail->Port       = 587;
+        $mail->SMTPSecure = 'ssl';
+        $mail->Port       = 465;
 
         //Recipients
         $mail->setFrom('facultypoolthapar@gmail.com', 'Faculty Pool');
