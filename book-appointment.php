@@ -8,76 +8,73 @@ require_once 'db.php'; // must provide $pdo (PDO)
 // helper escape
 function e($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
-// load faculty by id from GET
+// --- 1. Load Faculty by ID from GET ---
+$faculty_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $faculty = null;
-$faculty_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-if ($faculty_id > 0) {
-    $stmt = $pdo->prepare("SELECT * FROM faculty WHERE id = ? LIMIT 1");
-    $stmt->execute([$faculty_id]);
+
+if ($faculty_id) {
+    // Select the necessary fields from the Faculty table
+    $stmt = $pdo->prepare("
+        SELECT faculty_id, first_name, last_name, department, expertise, Image 
+        FROM Faculty 
+        WHERE faculty_id = :id LIMIT 1
+    ");
+    $stmt->execute([':id' => $faculty_id]);
     $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// fallback faculty
+// Fallback if faculty not found or ID missing
 if (!$faculty) {
-    $faculty = [
-        'id' => 0,
-        'name' => 'Dr. Ashima Singh',
-        'title' => 'Associate Professor',
-        'specialization' => 'DevOps, Data Mining and Machine Intelligence, Software Engineering',
-        'email' => 'ashima@thapar.edu',
-        'photo' => 'images/ashima-singh.jpg',
-    ];
+    // Redirect to the faculty list page if the ID is invalid
+    header('Location: all-faculty.php');
+    exit;
 }
 
-// ensure appointments table exists
+// Consolidate name and use fallback for image
+$faculty['full_name'] = e($faculty['first_name'] . ' ' . $faculty['last_name']);
+$faculty['image_url'] = $faculty['Image'] ?: 'https://placehold.co/420x260/A52A2A/ffffff?text=Image%20Missing';
+
+// --- 2. Handle POST for Appointment Booking ---
+$errors = [];
+$success = false;
+
+// Ensure appointments table exists (using the structure from the attached screenshot)
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS appointments (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   faculty_id INT NOT NULL,
   student_name VARCHAR(255) NOT NULL,
-  student_email VARCHAR(255) NOT NULL,
-  department VARCHAR(255) NOT NULL,
+  student_department VARCHAR(255) NOT NULL, /* Renamed department to student_department to avoid conflict */
   subgroup VARCHAR(16) NOT NULL,
   reason ENUM('paper related','doubt related','project related','other') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
 
-// handle POST
-$errors = [];
-$success = false;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $faculty_id_post = isset($_POST['faculty_id']) ? (int)$_POST['faculty_id'] : 0;
     $student_name = trim($_POST['student_name'] ?? '');
-    $student_email = trim($_POST['student_email'] ?? '');
-    $department = trim($_POST['department'] ?? '');
+    $student_department = trim($_POST['student_department'] ?? ''); /* Matched form name */
     $subgroup = trim($_POST['subgroup'] ?? '');
     $reason = trim($_POST['reason'] ?? '');
 
+    // Basic validation
+    if ($faculty_id_post !== $faculty_id) $errors[] = "Security error: Faculty ID mismatch.";
     if ($student_name === '') $errors[] = "Student name is required.";
+    if ($student_department === '') $errors[] = "Department is required.";
+    if ($subgroup === '') $errors[] = "Subgroup is required.";
 
-    if ($student_email === '' || !filter_var($student_email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Valid email is required.";
-    } else {
-        if (!preg_match('/@thapa\.edu$/i', $student_email)) {
-            $errors[] = "Email must end with '@thapa.edu'.";
-        }
-    }
-
-    if ($department === '' || !preg_match('/^[A-Za-z ]+$/', $department)) {
-        $errors[] = "Department is required and must contain only letters and spaces.";
-    }
-
-    if ($subgroup === '' || !preg_match('/^[A-Za-z0-9]{4}$/', $subgroup)) {
-        $errors[] = "Subgroup is required and must be exactly 4 letters/numbers (e.g. A1B2).";
-    }
-
-    $allowed = ['paper related','doubt related','project related','other'];
-    if (!in_array($reason, $allowed, true)) $errors[] = "Please choose a valid reason.";
+    $allowedReasons = ['paper related','doubt related','project related','other'];
+    if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
 
     if (empty($errors)) {
-        $ins = $pdo->prepare("INSERT INTO appointments (faculty_id, student_name, student_email, department, subgroup, reason) VALUES (?, ?, ?, ?, ?, ?)");
-        $ins->execute([$faculty_id_post, $student_name, $student_email, $department, $subgroup, $reason]);
+        // Insert data into the appointments table
+        $ins = $pdo->prepare("
+            INSERT INTO appointments (faculty_id, student_name, student_department, subgroup, reason) 
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $ins->execute([$faculty_id_post, $student_name, $student_department, $subgroup, $reason]);
         $success = true;
     }
 }
@@ -87,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Book Appointment - <?php echo e($faculty['name']); ?></title>
+  <title>Book Appointment - <?php echo $faculty['full_name']; ?></title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -108,22 +105,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .left-card { flex: 0 0 420px; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 18px 40px rgba(0,0,0,0.06); }
     .faculty-card-vertical { display:flex; flex-direction:column; align-items:stretch; }
     .faculty-image { width:100%; height:260px; overflow:hidden; border-bottom:5px solid #8B0000; }
-    .faculty-image img { width:100%; height:100%; object-fit:cover; display:block; }
+    .faculty-image img { 
+        width:100%; 
+        height:100%; 
+        object-fit: cover; 
+        display:block; 
+        transition: transform 0.3s ease;
+    }
+    .faculty-image img:hover {
+        transform: scale(1.05);
+    }
     .faculty-body { padding:20px; }
-    .faculty-name { font-size:1.15rem; font-weight:700; color:#8B0000; margin-bottom:6px; }
-    .faculty-title { color:#444; margin-bottom:12px; }
-    .label-strong { color:#8B0000; font-weight:700; margin-top:8px; margin-bottom:6px; display:block; }
+    .faculty-name { font-size:1.6rem; font-weight:700; color:#8B0000; margin-bottom:6px; } /* Increased size */
+    .faculty-title { color:#444; margin-bottom:12px; font-size:1rem; }
+    .label-strong { color:#8B0000; font-weight:700; margin-top:8px; margin-bottom:6px; display:block; font-size:0.9rem; text-transform:uppercase; }
+    .faculty-special { color:#333; line-height:1.5; font-size:0.95rem; }
 
     /* right form card */
-    .form-card { flex:1; background:#fff; padding:22px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.04); }
-    .form-card h4 { margin-bottom:14px; color:#222; }
+    .form-card { flex:1; background:#fff; padding:30px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.04); }
+    .form-card h4 { margin-bottom:20px; color:#8B0000; font-weight:700; font-size:1.5rem; }
+    .form-control { border-radius: 8px; border: 1px solid #ddd; padding: 10px 15px; }
     .form-control:focus { box-shadow:0 0 0 4px rgba(139,0,0,0.06); border-color:#8B0000; }
-    .submit-btn { background:#8B0000; color:#fff; border:0; padding:10px 16px; border-radius:8px; }
+    .submit-btn { background:#8B0000; color:#fff; border:0; padding:10px 20px; border-radius:8px; font-weight:600; transition: background-color 0.3s; }
+    .submit-btn:hover { background: #A52A2A; }
     .error { background:#fff0f0; border:1px solid #f5c6cb; color:#8B0000; padding:10px; border-radius:8px; margin-bottom:12px; }
     .success { background:#edf7ee; border:1px solid #c3e6cb; color:#155724; padding:10px; border-radius:8px; margin-bottom:12px; }
-
+    
     /* ---------------------------------------------------------------------- */
-    /* NAV BAR STYLES (EXACT MATCH TO INDEX.PHP) */
+    /* NAV BAR STYLES (MATCHED TO SITE WIDE STYLES) */
     /* ---------------------------------------------------------------------- */
     .creative-nav { 
       background: #8B0000; /* Primary Dark Red/Maroon */
@@ -145,24 +154,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #fff; 
       background-color: rgba(0, 0, 0, 0.15); /* Slightly darker background on hover */
     }
-    /* FIX: Active button should look like a highlighted button on a dark background */
     .creative-nav .nav-item.active {
-      color: #fff; /* White text */
-      background-color: #A52A2A; /* Slightly lighter/different maroon for contrast */
+      color: #fff; 
+      background-color: #A52A2A; 
       font-weight: 700;
       position: relative;
     }
-    /* FIX: Remove the non-matching indicator from the bottom */
-    .creative-nav .nav-item.active::after {
-      content: none;
-    }
 
     /* ---------------------------------------------------------------------- */
-    /* HERO SECTION STYLES (EXACT MATCH TO INDEX.PHP) */
+    /* HERO SECTION STYLES (MATCHED TO SITE WIDE STYLES) */
     /* ---------------------------------------------------------------------- */
     .hero-section {
       position: relative;
-      /* Using the exact gradient implied by index.php's visual style */
       background: linear-gradient(135deg, #8B0000 0%, #B22222 100%); 
       color: #fff;
       padding: 60px 0 60px 0; 
@@ -179,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       padding: 0 20px;
     }
     .hero-title {
-      font-size: 3rem; /* Adjusted for visual match */
+      font-size: 3rem; 
       font-weight: 800;
       margin-bottom: 0.5rem;
       text-transform: uppercase;
@@ -210,8 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       border-radius: 50%;
       margin: 0 10px;
     }
-    
-    /* Hero Particles Styling & Animation */
     .hero-particles {
       position: absolute;
       top: 0;
@@ -228,26 +229,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       opacity: 0.6;
       animation: particle-float infinite ease-in-out;
     }
-    .particle:nth-child(1) {
-      width: 30px; height: 30px; top: 10%; left: 20%;
-      animation-duration: 15s; animation-delay: 0s;
-    }
-    .particle:nth-child(2) {
-      width: 50px; height: 50px; top: 50%; left: 80%;
-      animation-duration: 20s; animation-delay: 5s;
-    }
-    .particle:nth-child(3) {
-      width: 20px; height: 20px; top: 80%; left: 40%;
-      animation-duration: 12s; animation-delay: 2s;
-    }
-    .particle:nth-child(4) {
-      width: 40px; height: 40px; top: 20%; left: 90%;
-      animation-duration: 18s; animation-delay: 8s;
-    }
-    .particle:nth-child(5) {
-      width: 60px; height: 60px; top: 70%; left: 10%;
-      animation-duration: 25s; animation-delay: 12s;
-    }
+    /* Simplified particle animation definitions */
+    .particle:nth-child(1) { width: 30px; height: 30px; top: 10%; left: 20%; animation-duration: 15s; animation-delay: 0s; }
+    .particle:nth-child(2) { width: 50px; height: 50px; top: 50%; left: 80%; animation-duration: 20s; animation-delay: 5s; }
+    .particle:nth-child(3) { width: 20px; height: 20px; top: 80%; left: 40%; animation-duration: 12s; animation-delay: 2s; }
+    .particle:nth-child(4) { width: 40px; height: 40px; top: 20%; left: 90%; animation-duration: 18s; animation-delay: 8s; }
+    .particle:nth-child(5) { width: 60px; height: 60px; top: 70%; left: 10%; animation-duration: 25s; animation-delay: 12s; }
     
     @keyframes particle-float {
       0% { transform: translate(0, 0) rotate(0deg); opacity: 0.6; }
@@ -265,11 +252,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="flex justify-between items-center py-3">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
-          <a href="department.php" class="nav-item">PROGRAMS</a>
+          <a href="departments.php" class="nav-item">DEPARTMENTS</a>
         </div>
 
         <div class="flex space-x-8">
-          <a href="faculty-member.php" class="nav-item active">FACULTY</a>
+          <a href="all-faculty.php" class="nav-item active">FACULTY</a>
         </div>
       </div>
     </div>
@@ -278,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Book Appointment</h1>
-      <p class="hero-subtitle">Request a meeting with <?php echo e($faculty['name']); ?></p>
+      <p class="hero-subtitle">Request a meeting with <?php echo $faculty['full_name']; ?></p>
       <div class="hero-decoration">
         <div class="decoration-line"></div>
         <div class="decoration-dot"></div>
@@ -296,29 +283,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <div class="page-inner">
     <div class="layout">
-      <div class="left-card" aria-label="Faculty">
+      <!-- LEFT CARD: FACULTY INFO (Dynamically populated) -->
+      <div class="left-card" data-aos="fade-right" aria-label="Faculty Information">
         <div class="faculty-card-vertical">
           <div class="faculty-image">
-            <img src="<?php echo e($faculty['photo'] ?? 'images/ashima-singh.jpg'); ?>" alt="<?php echo e($faculty['name']); ?>">
+            <img src="<?php echo $faculty['image_url']; ?>" alt="<?php echo $faculty['full_name']; ?>" onerror="this.onerror=null;this.src='https://placehold.co/420x260/A52A2A/ffffff?text=Image%20Missing';">
           </div>
           <div class="faculty-body">
-            <div class="faculty-name"><?php echo e($faculty['name']); ?></div>
-            <div class="faculty-title"><?php echo e($faculty['title'] ?? $faculty['position'] ?? 'Associate Professor'); ?></div>
+            <div class="faculty-name"><?php echo $faculty['full_name']; ?></div>
+            <div class="faculty-title"><i class="fas fa-building me-1"></i><?php echo e($faculty['department']); ?></div>
 
             <div>
-              <div class="label-strong">Specialization</div>
-              <div class="faculty-special" style="color:#333; line-height:1.5;"><?php echo nl2br(e($faculty['specialization'] ?? 'DevOps, Data Mining and machine intelligence, Software Engineering')); ?></div>
+              <div class="label-strong">Expertise/Specialization</div>
+              <div class="faculty-special" style="color:#333; line-height:1.5;">
+                  <?php echo nl2br(e($faculty['expertise'] ?? 'N/A')); ?>
+              </div>
             </div>
 
             <div style="margin-top:10px;">
               <div class="label-strong">Email</div>
-              <div><?php echo e($faculty['email']); ?></div>
+              <div class="faculty-special"><?php echo e($faculty['email'] ?? 'Not provided'); ?></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="form-card">
+      <!-- RIGHT CARD: BOOKING FORM -->
+      <div class="form-card" data-aos="fade-left">
         <h4>Book Appointment</h4>
 
         <?php if (!empty($errors)): ?>
@@ -331,41 +322,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($success): ?>
           <div class="success">
-            Appointment booked successfully!<br>
-            <strong>Student:</strong> <?php echo e($_POST['student_name']); ?><br>
-            <strong>Email:</strong> <?php echo e($_POST['student_email']); ?><br>
-            <strong>Reason:</strong> <?php echo e($_POST['reason']); ?>
+            <i class="fas fa-check-circle me-1"></i>Appointment booked successfully!
+            <ul style="margin:5px 0 0 0; padding-left:20px; font-size:0.9rem;">
+                <li>**Faculty:** <?php echo $faculty['full_name']; ?></li>
+                <li>**Student:** <?php echo e($_POST['student_name']); ?></li>
+                <li>**Reason:** <?php echo e($_POST['reason']); ?></li>
+            </ul>
           </div>
         <?php endif; ?>
 
         <form method="post" id="appointmentForm" novalidate>
-          <input type="hidden" name="faculty_id" value="<?php echo e($faculty['id'] ?? 0); ?>">
+          <input type="hidden" name="faculty_id" value="<?php echo $faculty['faculty_id']; ?>">
 
           <div class="mb-3">
             <label class="form-label">Student Name</label>
-            <input type="text" name="student_name" class="form-control" required value="<?php echo e($_POST['student_name'] ?? ''); ?>" placeholder="Full name">
+            <input type="text" name="student_name" class="form-control" required value="<?php echo e($_POST['student_name'] ?? ''); ?>" placeholder="Your full name">
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Email (must end with <code>@thapa.edu</code>)</label>
-            <input type="email" name="student_email" class="form-control" required value="<?php echo e($_POST['student_email'] ?? ''); ?>"
-                   pattern="^[^\s@]+@thapa\.edu$" title="Email must end with @thapa.edu" placeholder="you@thapa.edu">
+            <label class="form-label">Student Department (e.g., CSE, ME)</label>
+            <!-- Renamed input to student_department to match DB -->
+            <input type="text" name="student_department" class="form-control" required value="<?php echo e($_POST['student_department'] ?? ''); ?>"
+                   title="Department is required" placeholder="e.g. Computer Science">
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Department</label>
-            <input type="text" name="department" class="form-control" required value="<?php echo e($_POST['department'] ?? ''); ?>"
-                   pattern="^[A-Za-z ]+$" title="Only letters and spaces allowed" placeholder="e.g. Computer Science">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Subgroup (exactly 4 letters/numbers)</label>
+            <label class="form-label">Subgroup (e.g., A1B2)</label>
             <input type="text" name="subgroup" class="form-control" required value="<?php echo e($_POST['subgroup'] ?? ''); ?>"
                    pattern="^[A-Za-z0-9]{4}$" title="Exactly 4 letters/numbers" maxlength="4" placeholder="A1B2">
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Reason</label>
+            <label class="form-label">Reason for Appointment</label>
             <select name="reason" class="form-select" required>
               <option value="">-- Select reason --</option>
               <option value="paper related" <?php if(($_POST['reason'] ?? '')==='paper related') echo 'selected'; ?>>Paper related</option>
@@ -376,7 +364,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <div class="d-flex justify-content-end">
-            <button type="submit" class="submit-btn">Book Appointment</button>
+            <button type="submit" class="submit-btn">
+              <i class="fas fa-calendar-check me-2"></i>Book Appointment
+            </button>
           </div>
         </form>
       </div>
@@ -395,21 +385,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script>
     // client validation for friendly UX
     document.getElementById('appointmentForm').addEventListener('submit', function(e){
-      const email = this.student_email.value.trim();
-      if (!/^[^\s@]+@thapa\.edu$/i.test(email)) {
-        alert("Email must end with @thapa.edu");
-        e.preventDefault(); return;
-      }
-      const dept = this.department.value.trim();
-      if (!/^[A-Za-z ]+$/.test(dept)) {
-        alert("Department must contain only letters and spaces.");
-        e.preventDefault(); return;
-      }
       const subgroup = this.subgroup.value.trim();
       if (!/^[A-Za-z0-9]{4}$/.test(subgroup)) {
-        alert("Subgroup must be exactly 4 letters/numbers.");
+        alert("Subgroup must be exactly 4 letters/numbers (e.g., A1B2).");
         e.preventDefault(); return;
       }
+      // Note: Removed email validation based on the updated appointments table structure which excludes 'student_email'.
     });
 
     AOS && AOS.init && AOS.init({ duration: 700, easing: 'ease-in-out', once: true, offset: 100 });

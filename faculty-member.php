@@ -238,13 +238,13 @@ $resultCount = count($facultyList);
       <div class="flex justify-between items-center py-3 flex-wrap">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
-          <a href="departments.php" class="nav-item">DEPARTMENTS</a>
-          <a href="all-faculty.php" class="nav-item active">FACULTY</a>
+          <a href="department.php" class="nav-item">DEPARTMENTS</a>
+          <a href="faculty-member.php" class="nav-item active">FACULTY</a>
         </div>
         
         <!-- Search Bar Form -->
         <div class="search-form-container">
-            <form method="GET" action="all-faculty.php" class="flex">
+            <form method="GET" action="faculty-member.php" class="flex">
                 <input 
                     type="search" 
                     name="search_name" 
@@ -303,7 +303,8 @@ $resultCount = count($facultyList);
             $imageUrl = $faculty['Image'] ?: 'https://placehold.co/400x300/8B0000/ffffff?text=' . urlencode('No%20Image');
           ?>
             <!-- Faculty Grid Card -->
-            <a href="faculty-member.php?id=<?php echo e($faculty['faculty_id']); ?>" class="faculty-grid-card" data-aos="fade-up" data-aos-delay="100">
+            <!-- MODIFIED: Changed link destination to book-appointment.php -->
+            <a href="book-appointment.php?id=<?php echo e($faculty['faculty_id']); ?>" class="faculty-grid-card" data-aos="fade-up" data-aos-delay="100">
                 <div class="grid-image-container">
                     <img src="<?php echo $imageUrl; ?>" alt="<?php echo $fullName; ?>" class="grid-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/CCCCCC/333333?text=Image%20Missing';">
                 </div>
