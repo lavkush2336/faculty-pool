@@ -33,6 +33,7 @@ $pageTitle = "Experts for " . e($courseCode);
 // This aggressively searches for the course name within the expertise field, ignoring case and surrounding characters.
 // We use simple replacement to allow for partial matches on complex course names.
 $searchQuery = '%' . str_replace(['(', ')', '&', '/', '-'], '%', trim($courseName)) . '%';
+$courseCodeSearchQuery = '%' . trim($courseCode) . '%';
 
 // 2. Fetch Faculty by Expertise and Department
 $stmt = $pdo->prepare("
@@ -41,12 +42,13 @@ $stmt = $pdo->prepare("
     FROM Faculty F 
     WHERE 
         F.department_id = :department_id 
-        AND F.expertise LIKE :searchQuery
+        AND (F.expertise LIKE :searchQuery OR F.CT LIKE :courseCodeSearch)
     ORDER BY F.first_name ASC
 ");
 $stmt->execute([
     ':department_id' => $departmentId,
-    ':searchQuery' => $searchQuery
+    ':searchQuery' => $searchQuery,
+    ':courseCodeSearch' => $courseCodeSearchQuery
 ]);
 $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -246,7 +248,7 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $imageUrl = $faculty['Image'] ?: 'https://placehold.co/180x250/8B0000/ffffff?text=' . urlencode('No%20Image');
           ?>
             <!-- Faculty Card (Adapted from faculty-member.php style) -->
-            <a href="faculty-member.php?id=<?php echo e($faculty['faculty_id']); ?>" class="faculty-card-link" data-aos="fade-up" data-aos-delay="100">
+            <a href="book-appointment.php?id=<?php echo e($faculty['faculty_id']); ?>" class="faculty-card-link" data-aos="fade-up" data-aos-delay="100">
                 <div class="faculty-card">
                     <div class="faculty-image-container">
                         <img src="<?php echo $imageUrl; ?>" alt="<?php echo $fullName; ?>" class="faculty-image" onerror="this.onerror=null;this.src='https://placehold.co/180x250/CCCCCC/333333?text=Image%20Missing';">

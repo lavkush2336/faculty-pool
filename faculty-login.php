@@ -232,6 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       transition: all 0.3s ease;
       display: inline-block;
       margin: 0 0.5rem;
+      font-size: 0.9rem; /* Set font size to help fit on one line */
     }
 
     .login-links a:hover {
@@ -433,14 +434,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="login-links">
-              <a href="forgot-password.php" class="forgot-password">
+              <a href="change-password.php" class="forgot-password">
                 <i class="fas fa-key me-1"></i>
-                Forgot Password?
+                Change Password?
               </a>
               <span class="text-muted">|</span>
-              <a href="faculty-registration.php" class="faculty-signup">
-                <i class="fas fa-user-plus me-1"></i>
-                Faculty Registration
+              <a href="forgot-password.php" class="faculty-signup">
+                <i class="fas fa-question-circle me-1"></i> Forgot Password
               </a>
             </div>
 
