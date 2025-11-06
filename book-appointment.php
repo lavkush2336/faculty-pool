@@ -15,7 +15,7 @@ $faculty = null;
 if ($faculty_id) {
     // Select the necessary fields from the Faculty table
     $stmt = $pdo->prepare("
-        SELECT faculty_id, first_name, last_name, department, expertise, Image 
+        SELECT faculty_id, first_name, last_name, department, expertise, Image, email 
         FROM Faculty 
         WHERE faculty_id = :id LIMIT 1
     ");
@@ -37,45 +37,78 @@ $faculty['image_url'] = $faculty['Image'] ?: 'https://placehold.co/420x260/A52A2
 // --- 2. Handle POST for Appointment Booking ---
 $errors = [];
 $success = false;
+$post_data = $_POST; // Store POST data to repopulate form
 
-// Ensure appointments table exists (using the structure from the attached screenshot)
+// Check if the database schema needs updating
+// The table structure needs to be expanded to include the new fields.
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS appointments (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   faculty_id INT NOT NULL,
   student_name VARCHAR(255) NOT NULL,
-  student_department VARCHAR(255) NOT NULL, /* Renamed department to student_department to avoid conflict */
+  student_department VARCHAR(255) NOT NULL, 
   subgroup VARCHAR(16) NOT NULL,
   reason ENUM('paper related','doubt related','project related','other') NOT NULL,
+  
+  /* NEW COLUMNS ADDED HERE */
+  student_email VARCHAR(255) NOT NULL,
+  contact_number VARCHAR(15) NOT NULL, 
+  
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $faculty_id_post = isset($_POST['faculty_id']) ? (int)$_POST['faculty_id'] : 0;
-    $student_name = trim($_POST['student_name'] ?? '');
-    $student_department = trim($_POST['student_department'] ?? ''); /* Matched form name */
-    $subgroup = trim($_POST['subgroup'] ?? '');
-    $reason = trim($_POST['reason'] ?? '');
+    $faculty_id_post = isset($post_data['faculty_id']) ? (int)$post_data['faculty_id'] : 0;
+    $student_name = trim($post_data['student_name'] ?? '');
+    $student_department = trim($post_data['student_department'] ?? '');
+    $subgroup = trim($post_data['subgroup'] ?? '');
+    $reason = trim($post_data['reason'] ?? '');
+    
+    // NEW INPUTS
+    $student_email = trim($post_data['student_email'] ?? '');
+    $contact_number = trim($post_data['contact_number'] ?? '');
 
-    // Basic validation
+    // --- Validation ---
     if ($faculty_id_post !== $faculty_id) $errors[] = "Security error: Faculty ID mismatch.";
     if ($student_name === '') $errors[] = "Student name is required.";
     if ($student_department === '') $errors[] = "Department is required.";
     if ($subgroup === '') $errors[] = "Subgroup is required.";
+    
+    // Email validation: must end with thapar.edu
+    if (!filter_var($student_email, FILTER_VALIDATE_EMAIL) || !str_ends_with(strtolower($student_email), '@thapar.edu')) {
+         $errors[] = "Student Email is invalid or must end with @thapar.edu.";
+    }
+    
+    // Contact Number validation: must start with +91 and be 10 digits long (after +91)
+    if (!preg_match('/^\+91[0-9]{10}$/', $contact_number)) {
+        $errors[] = "Contact Number must be in the format +91XXXXXXXXXX (10 digits).";
+    }
 
     $allowedReasons = ['paper related','doubt related','project related','other'];
     if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
 
     if (empty($errors)) {
-        // Insert data into the appointments table
+        // --- Database Insertion (Updated to include new fields) ---
         $ins = $pdo->prepare("
-            INSERT INTO appointments (faculty_id, student_name, student_department, subgroup, reason) 
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO appointments (
+                faculty_id, student_name, student_department, subgroup, reason, student_email, contact_number
+            ) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        $ins->execute([$faculty_id_post, $student_name, $student_department, $subgroup, $reason]);
+        $ins->execute([
+            $faculty_id_post, 
+            $student_name, 
+            $student_department, 
+            $subgroup, 
+            $reason,
+            $student_email, // NEW FIELD
+            $contact_number // NEW FIELD
+        ]);
         $success = true;
+        // Clear post data on successful insertion to blank the form
+        $post_data = []; 
     }
 }
 ?>
@@ -325,8 +358,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <i class="fas fa-check-circle me-1"></i>Appointment booked successfully!
             <ul style="margin:5px 0 0 0; padding-left:20px; font-size:0.9rem;">
                 <li>**Faculty:** <?php echo $faculty['full_name']; ?></li>
-                <li>**Student:** <?php echo e($_POST['student_name']); ?></li>
-                <li>**Reason:** <?php echo e($_POST['reason']); ?></li>
+                <li>**Student:** <?php echo e($post_data['student_name']); ?></li>
+                <li>**Reason:** <?php echo e($post_data['reason']); ?></li>
             </ul>
           </div>
         <?php endif; ?>
@@ -336,19 +369,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="mb-3">
             <label class="form-label">Student Name</label>
-            <input type="text" name="student_name" class="form-control" required value="<?php echo e($_POST['student_name'] ?? ''); ?>" placeholder="Your full name">
+            <input type="text" name="student_name" class="form-control" required value="<?php echo e($post_data['student_name'] ?? ''); ?>" placeholder="Your full name">
           </div>
 
+          <!-- NEW: Student Email Input -->
+          <div class="mb-3">
+            <label class="form-label">Student Email (<span class="text-red-700 font-bold">@thapar.edu required</span>)</label>
+            <input type="email" name="student_email" class="form-control" required value="<?php echo e($post_data['student_email'] ?? ''); ?>" placeholder="example@thapar.edu">
+          </div>
+          
+          <!-- NEW: Contact Number Input -->
+          <div class="mb-3">
+            <label class="form-label">Contact Number (<span class="text-red-700 font-bold">+91XXXXXXXXXX required</span>)</label>
+            <input type="tel" name="contact_number" class="form-control" required value="<?php echo e($post_data['contact_number'] ?? ''); ?>" 
+                   pattern="^\+91[0-9]{10}$" title="Format: +91 followed by 10 digits" placeholder="+91XXXXXXXXXX">
+          </div>
+          
           <div class="mb-3">
             <label class="form-label">Student Department (e.g., CSE, ME)</label>
-            <!-- Renamed input to student_department to match DB -->
-            <input type="text" name="student_department" class="form-control" required value="<?php echo e($_POST['student_department'] ?? ''); ?>"
+            <input type="text" name="student_department" class="form-control" required value="<?php echo e($post_data['student_department'] ?? ''); ?>"
                    title="Department is required" placeholder="e.g. Computer Science">
           </div>
 
           <div class="mb-3">
             <label class="form-label">Subgroup (e.g., A1B2)</label>
-            <input type="text" name="subgroup" class="form-control" required value="<?php echo e($_POST['subgroup'] ?? ''); ?>"
+            <input type="text" name="subgroup" class="form-control" required value="<?php echo e($post_data['subgroup'] ?? ''); ?>"
                    pattern="^[A-Za-z0-9]{4}$" title="Exactly 4 letters/numbers" maxlength="4" placeholder="A1B2">
           </div>
 
@@ -356,10 +401,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label class="form-label">Reason for Appointment</label>
             <select name="reason" class="form-select" required>
               <option value="">-- Select reason --</option>
-              <option value="paper related" <?php if(($_POST['reason'] ?? '')==='paper related') echo 'selected'; ?>>Paper related</option>
-              <option value="doubt related" <?php if(($_POST['reason'] ?? '')==='doubt related') echo 'selected'; ?>>Doubt related</option>
-              <option value="project related" <?php if(($_POST['reason'] ?? '')==='project related') echo 'selected'; ?>>Project related</option>
-              <option value="other" <?php if(($_POST['reason'] ?? '')==='other') echo 'selected'; ?>>Other</option>
+              <option value="paper related" <?php if(($post_data['reason'] ?? '')==='paper related') echo 'selected'; ?>>Paper related</option>
+              <option value="doubt related" <?php if(($post_data['reason'] ?? '')==='doubt related') echo 'selected'; ?>>Doubt related</option>
+              <option value="project related" <?php if(($post_data['reason'] ?? '')==='project related') echo 'selected'; ?>>Project related</option>
+              <option value="other" <?php if(($post_data['reason'] ?? '')==='other') echo 'selected'; ?>>Other</option>
             </select>
           </div>
 
@@ -386,11 +431,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // client validation for friendly UX
     document.getElementById('appointmentForm').addEventListener('submit', function(e){
       const subgroup = this.subgroup.value.trim();
+      const studentEmail = this.student_email.value.trim();
+      const contactNumber = this.contact_number.value.trim();
+
+      // 1. Subgroup validation
       if (!/^[A-Za-z0-9]{4}$/.test(subgroup)) {
         alert("Subgroup must be exactly 4 letters/numbers (e.g., A1B2).");
         e.preventDefault(); return;
       }
-      // Note: Removed email validation based on the updated appointments table structure which excludes 'student_email'.
+      
+      // 2. Email constraint validation
+      if (!studentEmail.toLowerCase().endsWith('@thapar.edu')) {
+        alert("Student Email must end with @thapar.edu.");
+        e.preventDefault(); return;
+      }
+      
+      // 3. Contact Number constraint validation (+91XXXXXXXXXX)
+      if (!/^\+91[0-9]{10}$/.test(contactNumber)) {
+        alert("Contact Number must be in the format +91XXXXXXXXXX (10 digits).");
+        e.preventDefault(); return;
+      }
     });
 
     AOS && AOS.init && AOS.init({ duration: 700, easing: 'ease-in-out', once: true, offset: 100 });
