@@ -56,7 +56,7 @@
       <div class="flex justify-between items-center py-3">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
-          <a href="department.php" class="nav-item">PROGRAMS</a>
+          <a href="departments.php" class="nav-item">PROGRAMS</a>
         </div>
 
         <div class="flex space-x-8">
@@ -89,7 +89,7 @@
   <section class="main-content">
     <div class="max-w-7xl mx-auto">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12" id="cardsView">
-        <a href="department.php">
+        <a href="departments.php">
           <div class="flex-card cursor-pointer" onclick="showPrograms(event)">
             <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-graduation-cap"></i></div>
             <div class="text-3xl font-semibold text-primary-400 mb-4">Programs</div>

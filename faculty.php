@@ -14,7 +14,7 @@ $departmentId = filter_input(INPUT_GET, 'department_id', FILTER_VALIDATE_INT);
 
 // Redirect if critical course information is missing
 if (!$courseName || !$departmentId) {
-    header('Location: departments.php');
+    header('Location: department.php');
     exit;
 }
 

@@ -107,7 +107,7 @@ foreach ($courses as $course) {
       <div class="flex justify-between items-center py-3">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
-          <a href="department.php" class="nav-item active">DEPARTMENTS</a>
+          <a href="departments.php" class="nav-item active">DEPARTMENTS</a>
         </div>
       </div>
     </div>
@@ -171,7 +171,7 @@ foreach ($courses as $course) {
       <?php endif; ?>
 
       <div class="mt-8 flex gap-4 items-center">
-        <a href="department.php" class="creative-button" data-aos="fade-up">
+        <a href="departments.php" class="creative-button" data-aos="fade-up">
           <i class="fas fa-arrow-left"></i><span>Back to Departments</span>
         </a>
       </div>

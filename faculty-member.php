@@ -265,7 +265,7 @@ $resultCount = count($facultyList);
       <div class="flex justify-between items-center py-3 flex-wrap">
         <div class="flex space-x-8">
           <a href="index.php" class="nav-item">HOME</a>
-          <a href="department.php" class="nav-item">DEPARTMENTS</a>
+          <a href="departments.php" class="nav-item">DEPARTMENTS</a>
           <a href="faculty-member.php" class="nav-item active">FACULTY</a>
         </div>
         
