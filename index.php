@@ -103,10 +103,17 @@
         </div>
         </a>
         
-        <a href="student.php" class="md:col-span-2 md:w-1/2 md:mx-auto">
+        <a href="student.php">
           <div class="flex-card cursor-pointer">
             <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-user"></i></div>
             <div class="text-3xl font-semibold text-primary-400 mb-4">Student's Domain</div>
+          </div>
+        </a>
+        
+        <a href="research.php">
+          <div class="flex-card cursor-pointer">
+            <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-flask"></i></div>
+            <div class="text-3xl font-semibold text-primary-400 mb-4">Research/Project</div>
           </div>
         </a>
       </div>
