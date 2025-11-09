@@ -3,11 +3,14 @@
 
 // --- 1. Database Configuration ---
 // IMPORTANT: Update these credentials to match your local MySQL setup (e.g., XAMPP/WAMP)
-define('DB_SERVER', 'sql110.infinityfree.com');
-define('DB_USERNAME', 'if0_40356779'); // Your MySQL username
-define('DB_PASSWORD', 'Divyam2005');     // Your MySQL password
-define('DB_NAME', 'if0_40356779_faculty_pool'); // Database name as seen in phpMyAdmin image
-
+// define('DB_SERVER', 'sql110.infinityfree.com');
+// define('DB_USERNAME', 'if0_40356779'); 
+// define('DB_PASSWORD', 'Divyam2005');
+// define('DB_NAME', 'if0_40356779_faculty_pool');
+define('DB_SERVER', 'localhost');
+define('DB_USERNAME', 'root'); 
+define('DB_PASSWORD', '');
+define('DB_NAME', 'faculty_pool');
 // --- 2. Database Connection and Fetching ---
 $conn = new mysqli(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME);
 

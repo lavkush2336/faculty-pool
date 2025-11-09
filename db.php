@@ -1,8 +1,12 @@
 <?php
-$DB_HOST = 'sql110.infinityfree.com';
-$DB_USER = 'if0_40356779';
-$DB_PASS = 'Divyam2005';
-$DB_NAME = 'if0_40356779_faculty_pool';
+// $DB_HOST = 'sql110.infinityfree.com';
+// $DB_USER = 'if0_40356779';
+// $DB_PASS = 'Divyam2005';
+// $DB_NAME = 'if0_40356779_faculty_pool';
+$DB_HOST = 'localhost';
+$DB_USER = 'root';
+$DB_PASS = '';
+$DB_NAME = 'faculty_pool';
 $DB_CHARSET = 'utf8mb4';
 
 $dsn = "mysql:host=$DB_HOST;dbname=$DB_NAME;charset=$DB_CHARSET";

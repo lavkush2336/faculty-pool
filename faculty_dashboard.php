@@ -24,10 +24,14 @@ $isAttendanceDisabled = (time() > strtotime('today 10:30'));
 // ---------------------------------------------------------------------------------
 // *** DATABASE CONNECTION (MODIFIED to use mysqli approach as requested) ***
 // ---------------------------------------------------------------------------------
-$server='sql110.infinityfree.com';
-$user='if0_40356779';
-$pw='Divyam2005';
-$db='if0_40356779_faculty_pool';
+// $server='sql110.infinityfree.com';
+// $user='if0_40356779';
+// $pw='Divyam2005';
+// $db='if0_40356779_faculty_pool';
+$server='localhost';
+$user='root';
+$pw='';
+$db='faculty_pool';
 // Using $con for mysqli connection
 $con = mysqli_connect($server, $user, $pw, $db); 
 
