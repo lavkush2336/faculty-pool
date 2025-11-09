@@ -805,6 +805,60 @@ body {
     transform: translateX(-3px);
 }
 
+/* Filter Button Styles (for Explore Projects page) */
+.filter-btn {
+    background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+}
+
+.filter-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 0, 0, 0.4);
+}
+
+/* Form Field Styles (for consistency across login, signup, reset, explore pages) */
+.form-group {
+    position: relative;
+    margin-bottom: 2rem; /* Increased margin for better spacing */
+}
+
+.form-control {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(139, 0, 0, 0.2); /* Slightly more prominent border */
+    border-radius: 15px; /* Larger border-radius */
+    padding: 1.2rem 1.5rem; /* Increased padding for bigger fields */
+    font-size: 1.1rem; /* Larger font size */
+    transition: all 0.3s ease;
+    width: 100%;
+    color: #2d3748; /* Ensure text color is readable */
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #8B0000;
+    background: rgba(255, 255, 255, 1); /* Solid white background on focus */
+    box-shadow: 0 0 0 4px rgba(139, 0, 0, 0.2); /* Enhanced focus shadow */
+}
+
+.form-label {
+    color: #8B0000;
+    font-weight: 700; /* Bolder label font */
+    margin-bottom: 0.8rem; /* Increased margin for label */
+    display: block;
+    font-size: 1.1rem; /* Larger label font size */
+}
+
 /* Footer */
 .creative-footer {
     background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
@@ -921,6 +975,167 @@ body {
     0% { box-shadow: 0 0 0 0 rgba(139, 0, 0, 0.7); }
     70% { box-shadow: 0 0 0 10px rgba(139, 0, 0, 0); }
     100% { box-shadow: 0 0 0 0 rgba(139, 0, 0, 0); }
+}
+
+/* Research/Project Card Styles */
+.research-card {
+    position: relative;
+    overflow: visible;
+}
+
+.research-card.expanded {
+    overflow: visible;
+}
+
+.research-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.research-inner-cards {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    margin-top: 0;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                margin-top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.research-inner-cards.hidden {
+    display: none !important;
+}
+
+.research-card.expanded .research-inner-cards:not(.hidden) {
+    opacity: 1;
+    max-height: 500px;
+    margin-top: 0;
+    display: flex;
+    min-height: 200px;
+    align-items: center;
+}
+
+.research-card.expanded .research-card-header {
+    display: none !important;
+}
+
+.research-sub-card {
+    background: rgb(255, 255, 255);
+    backdrop-filter: blur(15px);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    min-height: 280px;
+    max-width: none;
+}
+
+.research-sub-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8B0000, #A52A2A, #8B0000);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.research-sub-card:hover::before {
+    transform: scaleX(1);
+}
+
+.research-sub-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+.research-sub-card:active {
+    transform: translateY(-2px);
+}
+
+.research-back-btn {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.research-back-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.4);
+}
+
+.research-back-btn i {
+    transition: transform 0.3s ease;
+}
+
+.research-back-btn:hover i {
+    transform: translateX(-3px);
+}
+
+.research-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 0;
+}
+
+.research-sub-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .research-inner-cards {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .research-sub-card {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .research-cards-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
 }
 
 /* Add styles for the new faculty cards */
