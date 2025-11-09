@@ -119,12 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </head>
 <body class="font-poppins">
-  <div class="signup-container">
+  <div class="login-container">
     <a href="index.php" class="back-to-home">
       <i class="fas fa-arrow-left"></i> Back to Home
     </a>
 
-    <div class="signup-card">
+    <div class="login-card">
       <div class="text-center mb-4">
         <div class="text-4xl mb-3" style="color: #8B0000;">
           <i class="fas fa-user-plus"></i>
@@ -283,12 +283,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           >
         </div>
 
-        <button type="submit" class="signup-btn">
+        <button type="submit" class="login-btn">
           <i class="fas fa-user-plus"></i> Sign Up
         </button>
       </form>
 
-      <div class="login-link">
+      <div class="login-links">
         <p>Already have an account? <a href="student-login.php"><i class="fas fa-sign-in-alt"></i> Login</a></p>
       </div>
     </div>
@@ -357,20 +357,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       const password = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirm_password').value;
       const department = document.getElementById('department').value;
-      const expertise = document.getElementById('expertise').value;
-
-      // Basic validation for department (required)
+      // Expertise is optional, so no direct validation for emptiness here
+      
+      // Additional validation for department (required)
       if (department === '') {
         alert('Please select your department.');
         return false;
       }
-      // Expertise is optional, so no direct validation for emptiness here
       
+      // Password length check
       if (password.length < 8) {
         alert('Password must be at least 8 characters long.');
         return false;
       }
       
+      // Password complexity checks
       const hasUppercase = /[A-Z]/.test(password);
       const hasNumber = /[0-9]/.test(password);
       const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
@@ -390,6 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return false;
       }
       
+      // Password match check
       if (password !== confirmPassword) {
         alert('Passwords do not match.');
         return false;

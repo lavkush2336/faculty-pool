@@ -78,12 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </head>
 <body class="font-poppins">
-  <div class="reset-container">
+  <div class="login-container">
     <a href="index.php" class="back-to-home">
       <i class="fas fa-arrow-left"></i> Back to Home
     </a>
 
-    <div class="reset-card">
+    <div class="login-card">
       <div class="text-center mb-4">
         <div class="text-4xl mb-3" style="color: #8B0000;">
           <i class="fas fa-key"></i>
@@ -154,12 +154,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div id="password-match" class="text-sm mt-1"></div>
         </div>
 
-        <button type="submit" class="save-btn">
+        <button type="submit" class="login-btn">
           <i class="fas fa-save"></i> Save Password
         </button>
       </form>
 
-      <div class="login-link">
+      <div class="login-links">
         <p>Remember your password? <a href="student-login.php"><i class="fas fa-sign-in-alt"></i> Login</a></p>
       </div>
     </div>
