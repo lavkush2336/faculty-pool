@@ -16,7 +16,7 @@ if ($faculty_id) {
     // Select the necessary fields from the Faculty table, including SVH times
     $stmt = $pdo->prepare("
         SELECT faculty_id, first_name, last_name, department, expertise, Image, email, svh_start_time, svh_end_time
-        FROM Faculty 
+        FROM faculty 
         WHERE faculty_id = :id LIMIT 1
     ");
     $stmt->execute([':id' => $faculty_id]);

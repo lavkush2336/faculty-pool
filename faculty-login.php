@@ -2,6 +2,7 @@
 // faculty-login.php
 // Implements secure login logic
 session_start(); // Start the session at the very top
+// IMPORTANT: Ensure 'db.php' is correctly configured with your InfinityFree database credentials.
 require_once 'db.php'; // Database connection must be defined here as $pdo
 
 $login_error = '';
@@ -17,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // 2. Prepare and execute the query to fetch the faculty record by email and the stored password hash
             // We fetch 'password' (the hash) from the new column.
-            $stmt = $pdo->prepare("SELECT faculty_id, first_name, password FROM Faculty WHERE email = :email");
+            $stmt = $pdo->prepare("SELECT faculty_id, first_name, password FROM faculty WHERE email = :email");
             $stmt->execute([':email' => $facultyEmail]);
             $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -41,9 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $login_error = 'Invalid email or password. Please try again.';
 
         } catch (PDOException $e) {
-            // Log the error for debugging and show a generic message to the user
+            // VITAL FIX: Temporarily show the actual PDO error for debugging on InfinityFree.
+            // DO NOT leave this in a production environment.
             error_log("Login PDO Error: " . $e->getMessage());
-            $login_error = 'A system error occurred. Please try again later.';
+            // This line will now display the actual error (e.g., connection failed)
+            $login_error = 'System Error: ' . $e->getMessage();
         }
     } else {
         $login_error = 'Please enter both your email and password.';

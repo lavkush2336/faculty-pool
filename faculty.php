@@ -39,7 +39,7 @@ $courseCodeSearchQuery = '%' . trim($courseCode) . '%';
 $stmt = $pdo->prepare("
     SELECT 
         F.faculty_id, F.first_name, F.last_name, F.email, F.expertise, F.Image, F.department
-    FROM Faculty F 
+    FROM faculty F 
     WHERE 
         F.department_id = :department_id 
         AND (F.expertise LIKE :searchQuery OR F.CT LIKE :courseCodeSearch)
