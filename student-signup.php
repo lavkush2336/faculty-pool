@@ -1,7 +1,7 @@
 <?php
 // student-signup.php
 session_start();
-require_once 'db.php';
+require_once 'db.php'; // Assumes this file provides the PDO database connection ($pdo)
 
 $signup_error = '';
 $signup_success = '';
@@ -14,7 +14,7 @@ $form_data = [
     'expertise' => ''
 ];
 
-// Fetch departments for the dropdown
+// Fetch departments for the dropdown (assuming 'departments' table holds department names)
 $departments = [];
 try {
     $stmt = $pdo->prepare("SELECT department_name FROM departments ORDER BY department_name ASC");
@@ -22,10 +22,11 @@ try {
     $departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
     error_log("Error fetching departments: " . $e->getMessage());
-    $signup_error = 'Could not load departments. Please try again later.';
+    // Gracefully continue even if departments fail to load
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Collect and sanitize all fields
     $form_data['name'] = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING) ?? '';
     $form_data['email'] = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL) ?? '';
     $form_data['phone'] = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING) ?? '';
@@ -35,11 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    if ($form_data['name'] && $form_data['email'] && $password && $form_data['phone'] && $form_data['institute']) {
+    // Check required fields
+    if ($form_data['name'] && $form_data['email'] && $password && $form_data['phone'] && $form_data['institute'] && $form_data['department']) {
+        
         if ($password !== $confirm_password) {
             $signup_error = 'Passwords do not match.';
         } else {
-            // Password validation: minimum 8 characters, one special character, one capital letter, one number
+            // --- Password Validation ---
             if (strlen($password) < 8) {
                 $signup_error = 'Password must be at least 8 characters long.';
             } else {
@@ -54,29 +57,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (!$has_special) {
                     $signup_error = 'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)';
                 } else {
+                    // --- Passed Validation: Proceed to Database ---
                     try {
-                        // Check if email already exists
-                        $stmt = $pdo->prepare("SELECT student_id FROM students WHERE email = :email");
+                        // 1. Check if email already exists
+                        $stmt = $pdo->prepare("SELECT Student_ID FROM student WHERE Email = :email");
                         $stmt->execute([':email' => $form_data['email']]);
                         if ($stmt->fetch()) {
                             $signup_error = 'Email already registered. Please login instead.';
                         } else {
-                            // Create students table if it doesn't exist
-                            $pdo->exec("CREATE TABLE IF NOT EXISTS students (
-                                student_id INT AUTO_INCREMENT PRIMARY KEY,
-                                name VARCHAR(255) NOT NULL,
-                                email VARCHAR(255) UNIQUE NOT NULL,
-                                password VARCHAR(255) NOT NULL,
-                                phone VARCHAR(20),
-                                institute_name VARCHAR(255),
-                                department_name VARCHAR(255),
-                                expertise VARCHAR(255),
+                            // 2. Create the 'student' table if it doesn't exist
+                            // NOTE: Column names match your attached image (Student_ID, Name, etc.)
+                            $pdo->exec("CREATE TABLE IF NOT EXISTS student (
+                                Student_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
+                                Name VARCHAR(50) NOT NULL,
+                                Email VARCHAR(250) UNIQUE NOT NULL,
+                                Password VARCHAR(200) NOT NULL,
+                                Phone VARCHAR(15),
+                                Institute VARCHAR(250),
+                                Department VARCHAR(250),
+                                Expertise VARCHAR(1000),
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )");
 
-                            // Insert new student
+                            // 3. Insert new student with hashed password
                             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                            $stmt = $pdo->prepare("INSERT INTO students (name, email, password, phone, institute_name, department_name, expertise) 
+                            $stmt = $pdo->prepare("INSERT INTO student (Name, Email, Password, Phone, Institute, Department, Expertise) 
                                                   VALUES (:name, :email, :password, :phone, :institute, :department, :expertise)");
                             $stmt->execute([
                                 ':name' => $form_data['name'],
@@ -88,7 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ':expertise' => $form_data['expertise']
                             ]);
 
-                            $signup_success = 'Account created successfully! You can now login.';
+                            $signup_success = 'Account created successfully! Redirecting to login...';
+                            // Redirect to login page after 2 seconds
+                            header("refresh:2;url=student-login.php");
                             // Clear form data on success
                             $form_data = ['name' => '', 'email' => '', 'phone' => '', 'institute' => '', 'department' => '', 'expertise' => ''];
                         }
@@ -100,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } else {
-        $signup_error = 'Please fill in all fields.';
+        $signup_error = 'Please fill in all required fields.';
     }
 }
 ?>
@@ -117,6 +124,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <style>
+    /* Custom styles to match the theme of the other files */
+    .font-poppins { font-family: 'Poppins', sans-serif; }
+    .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f8f9fa; padding: 20px 0; }
+    .login-card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; }
+    .form-control { border-radius: 8px; border: 1px solid #ddd; padding: 10px 15px; width: 100%; }
+    .form-control:focus { border-color: #8B0000; box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); }
+    .login-btn { background: #8B0000; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; width: 100%; transition: background-color 0.3s; margin-top: 15px; }
+    .login-btn:hover { background: #A52A2A; }
+    .password-input-group { position: relative; }
+    .password-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #999; }
+    .error-message { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
+    .success-message { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
+    .login-links { text-align: center; margin-top: 20px; font-size: 0.9rem; }
+    .login-links a { color: #8B0000; text-decoration: none; }
+    .login-links a:hover { text-decoration: underline; }
+    .back-to-home { position: absolute; top: 20px; left: 20px; color: #8B0000; text-decoration: none; font-weight: 500; }
+    .back-to-home:hover { text-decoration: underline; }
+  </style>
 </head>
 <body class="font-poppins">
   <div class="login-container">
@@ -255,7 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-group">
           <label for="department" class="form-label">
-            <i class="fas fa-building"></i> Desired Department
+            <i class="fas fa-building"></i> Department
           </label>
           <select id="department" name="department" class="form-control" required>
             <option value="">Select your department</option>
@@ -271,7 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-group">
           <label for="expertise" class="form-label">
-            <i class="fas fa-lightbulb"></i> Your Expertise
+            <i class="fas fa-lightbulb"></i> Expertise
           </label>
           <input 
             type="text" 
@@ -357,7 +385,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       const password = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirm_password').value;
       const department = document.getElementById('department').value;
-      // Expertise is optional, so no direct validation for emptiness here
       
       // Additional validation for department (required)
       if (department === '') {
@@ -402,4 +429,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </script>
 </body>
 </html>
-

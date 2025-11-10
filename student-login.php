@@ -1,7 +1,7 @@
 <?php
 // student-login.php
 session_start();
-require_once 'db.php';
+require_once 'db.php'; // Assumes this file provides the PDO database connection ($pdo)
 
 $login_error = '';
 $studentEmail = '';
@@ -11,20 +11,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if ($studentEmail && $password) {
+        // Basic length check (the hashing/verification handles the complexity checks)
         if (strlen($password) < 8) {
             $login_error = 'Password must be at least 8 characters long.';
         } else {
             try {
-                // Check if students table exists, if not we'll handle it gracefully
-                $stmt = $pdo->prepare("SELECT student_id, name, email, password FROM students WHERE email = :email");
+                // 1. Fetch student data by email
+                // Note: The table structure based on your image uses 'Name' and 'Student_ID'
+                $stmt = $pdo->prepare("SELECT Student_ID, Name, Email, Password FROM student WHERE Email = :email");
                 $stmt->execute([':email' => $studentEmail]);
                 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if ($student && password_verify($password, $student['password'])) {
-                    $_SESSION['student_id'] = $student['student_id'];
-                    $_SESSION['student_name'] = $student['name'];
+                // 2. Verify password using hashing
+                if ($student && password_verify($password, $student['Password'])) {
+                    // Success: Set session variables
+                    $_SESSION['student_id'] = $student['Student_ID'];
+                    $_SESSION['student_name'] = $student['Name'];
                     $_SESSION['student_logged_in'] = true;
-                    header('Location: student-dashboard.php');
+                    header('Location: student-dashboard.php'); // Redirect to the dashboard
                     exit;
                 } else {
                     $login_error = 'Invalid email or password. Please try again.';
@@ -52,6 +56,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <style>
+    /* Custom styles to match the theme of the other files */
+    .font-poppins { font-family: 'Poppins', sans-serif; }
+    .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f8f9fa; }
+    .login-card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; }
+    .form-control { border-radius: 8px; border: 1px solid #ddd; padding: 10px 15px; width: 100%; }
+    .form-control:focus { border-color: #8B0000; box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); }
+    .login-btn { background: #8B0000; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; width: 100%; transition: background-color 0.3s; margin-top: 15px; }
+    .login-btn:hover { background: #A52A2A; }
+    .password-input-group { position: relative; }
+    .password-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #999; }
+    .error-message { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
+    .success-message { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
+    .login-links { display: flex; justify-content: space-between; margin-top: 20px; font-size: 0.9rem; }
+    .login-links a { color: #8B0000; text-decoration: none; }
+    .login-links a:hover { text-decoration: underline; }
+    .back-to-home { position: absolute; top: 20px; left: 20px; color: #8B0000; text-decoration: none; font-weight: 500; }
+    .back-to-home:hover { text-decoration: underline; }
+  </style>
 </head>
 <body class="font-poppins">
   <div class="login-container">
@@ -145,6 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     function validateLoginForm() {
       const password = document.getElementById('password').value;
       if (password.length < 8) {
+        // NOTE: We should avoid 'alert()' but since the original JS used it, I kept the check.
+        // The password length check is also handled on the server side.
         alert('Password must be at least 8 characters long.');
         return false;
       }
@@ -153,4 +180,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </script>
 </body>
 </html>
-
