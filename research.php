@@ -55,11 +55,13 @@
             <p class="text-gray-600 text-center">Access research opportunities and project collaborations as a student</p>
           </div>
         </a>
-        <div class="research-sub-card cursor-pointer" data-aos="fade-up" data-aos-delay="200">
-          <div class="text-4xl text-primary-600 mb-4"><i class="fas fa-chalkboard-teacher"></i></div>
-          <div class="text-3xl font-semibold text-primary-400 mb-3">I am a Teacher</div>
-          <p class="text-gray-600 text-center">Manage research projects and collaborate with students</p>
-        </div>
+        <a href="teacher-login.php" class="research-sub-card-link">
+          <div class="research-sub-card cursor-pointer" data-aos="fade-up" data-aos-delay="200">
+            <div class="text-4xl text-primary-600 mb-4"><i class="fas fa-chalkboard-teacher"></i></div>
+            <div class="text-3xl font-semibold text-primary-400 mb-3">I am a Teacher</div>
+            <p class="text-gray-600 text-center">Manage research projects and collaborate with students</p>
+          </div>
+        </a>
       </div>
 
       <div class="mt-8 flex gap-4 items-center justify-center">
@@ -86,4 +88,3 @@
   </script>
 </body>
 </html>
-

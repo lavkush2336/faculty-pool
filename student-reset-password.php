@@ -268,4 +268,8 @@ $display_email = $_GET['email'] ?? ($_POST['email'] ?? '');
     checkPasswordMatch();
   </script>
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> ca5589850a97fbd53a7ac21e6db2745a3ba7ccdd
