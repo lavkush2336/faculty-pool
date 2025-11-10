@@ -12,27 +12,44 @@ error_reporting(E_ALL);
 // 1. PHP SETUP & DATABASE INTEGRATION
 // -----------------------------------------------------------
 session_start();
-// In a real application, you must check for a valid session.
-// If not logged in: header('Location: faculty-login.php'); exit;
 
 // Set PHP Timezone to IST (India Standard Time) for all calculations
 date_default_timezone_set('Asia/Kolkata');
 
-// --- Check if attendance should be disabled (before 10:30 AM IST) ---
-$isAttendanceDisabled = (time() > strtotime('today 10:30'));
+// --- ACADEMIC CALENDAR NON-TEACHING DATES (Manual Extraction) ---
+$non_teaching_dates = [
+    '2025-08-15', 
+    '2025-09-22', 
+    '2025-09-23', 
+    '2025-09-24', 
+    '2025-10-06', 
+    '2025-10-07', 
+    '2025-10-08', 
+    '2025-11-14', 
+    '2025-12-12', 
+    '2025-12-13', 
+    '2025-12-19', 
+    '2025-12-20', 
+];
+
+// --- Check for Weekend or Academic Non-Teaching Day ---
+$current_day_name = date('D');
+$current_date_ymd = date('Y-m-d');
+
+$is_academic_non_teaching_day = in_array($current_date_ymd, $non_teaching_dates);
+$is_weekend = ($current_day_name === 'Sat' || $current_day_name === 'Sun');
+$isAttendanceDisabledBySchedule = $is_weekend || $is_academic_non_teaching_day;
+
+// --- Check if attendance should be disabled (after 10:30 AM IST) ---
+$isAttendanceClosedByTime = (time() > strtotime('today 10:30'));
 
 // ---------------------------------------------------------------------------------
-// *** DATABASE CONNECTION (MODIFIED to use mysqli approach as requested) ***
+// *** DATABASE CONNECTION (using mysqli as in previous steps) ***
 // ---------------------------------------------------------------------------------
-// $server='sql110.infinityfree.com';
-// $user='if0_40356779';
-// $pw='Divyam2005';
-// $db='if0_40356779_faculty_pool';
 $server='localhost';
 $user='root';
 $pw='';
 $db='faculty_pool';
-// Using $con for mysqli connection
 $con = mysqli_connect($server, $user, $pw, $db); 
 
 $db_error = null;
@@ -40,97 +57,69 @@ if (mysqli_connect_errno()) {
     $db_error = "Failed to connect to MySQL: " . mysqli_connect_error();
 }
 
-// Use session data for personalization
+// Session check
+if(!isset($_SESSION['faculty_id'])) {
+    header('Location:faculty-login.php');
+    exit; // Ensure script stops execution after redirect
+}
+
 $faculty_id = $_SESSION['faculty_id'] ?? 101; 
 $faculty_name = $_SESSION['faculty_name'] ?? "Dr. Sharma";
 
-$appointments = []; // Array to hold fetched and processed appointments
+$appointments = []; // Array to hold fetched appointments
+
+// --- CHECK IF ATTENDANCE IS ALREADY MARKED TODAY ---
+$hasAttendanceBeenMarked = false;
+
+if (isset($con) && !$db_error && !$isAttendanceDisabledBySchedule) {
+    $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
+    
+    $check_sql = "SELECT COUNT(*) AS count FROM attendance WHERE faculty_id = '$safe_faculty_id' AND Date = '$current_date_ymd'";
+    $check_result = mysqli_query($con, $check_sql);
+
+    if ($check_result && mysqli_fetch_assoc($check_result)['count'] > 0) {
+        $hasAttendanceBeenMarked = true;
+    }
+}
+
+// --- FINAL ATTENDANCE DISABLE CONDITION (UPDATED) ---
+$isAttendanceDisabled = $isAttendanceClosedByTime || $hasAttendanceBeenMarked || $isAttendanceDisabledBySchedule;
 
 
-/**
- * Fetches and processes appointments based on status, applying a wider IST cutoff
- * to ensure display in test environments. Filters out appointments older than 30 days.
- */
-function fetchAppointments($con, $faculty_id) {
-    global $db_error;
+// ----------------------------------------------------------------------
+// *** APPOINTMENT FETCH LOGIC (SIMPLIFIED and DIRECT) ***
+// ----------------------------------------------------------------------
+// Fetches appointments directly without complex date/time conversion logic.
+
+if (isset($con) && !$db_error) {
+    $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
     
-    // 1. Calculate the IST cutoff timestamp (30 Days Ago Midnight IST).
-    $ist_cutoff_timestamp = strtotime('-30 days midnight');
-    
-    // 2. SQL Query: Fetch all Pending and Approved appointments for the faculty member.
-    // WARNING: This query is *NOT* using prepared statements, which is a SECURITY RISK (SQL Injection).
+    // Fetch all Pending and Approved appointments for the faculty member.
+    // We order by slot_date and slot_time for chronological display.
     $sql = "
         SELECT 
-            id, student_name, student_email, contact_number, reason, slot_time, status 
+            id, student_name, student_email, contact_number, reason, slot_date, slot_time, status 
         FROM appointments 
         WHERE 
-            faculty_id = '$faculty_id' 
+            faculty_id = '$safe_faculty_id' 
             AND status IN ('pending', 'approved')
-        ORDER BY slot_time ASC
+        ORDER BY slot_date ASC, slot_time ASC
     ";
     
     $result = mysqli_query($con, $sql);
     
-    if (!$result) {
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $appointments[] = $row;
+        }
+    } else {
         error_log("Appointment Fetch Error: " . mysqli_error($con));
         $db_error = "Could not fetch appointments: Database error. Check logs for details."; 
-        return [];
     }
-    
-    $raw_appointments = [];
-    while ($row = mysqli_fetch_assoc($result)) {
-        $raw_appointments[] = $row;
-    }
-    
-    $filtered_appointments = [];
-    $ist_timezone = new DateTimeZone('Asia/Kolkata');
-    $gmt_timezone = new DateTimeZone('GMT');
-
-    // 3. Process, Convert Time Zones, and Apply Cutoff Filter
-    foreach ($raw_appointments as $appt) {
-        // Ensure slot_time is not empty or invalid before attempting DateTime conversion
-        if (empty($appt['slot_time'])) {
-            error_log("Missing slot_time for Appointment #{$appt['id']}");
-            continue; 
-        }
-        
-        try {
-            // Get the slot time as a DateTime object (it's stored in GMT/UTC in the DB)
-            $gmt_time = new DateTime($appt['slot_time'], $gmt_timezone);
-            
-            // Convert the scheduled time to IST for comparison and display
-            $ist_time = clone $gmt_time;
-            $ist_time->setTimezone($ist_timezone);
-            
-            // Apply the **LOOSE** cutoff filter (last 30 days).
-            if ($ist_time->getTimestamp() >= $ist_cutoff_timestamp) {
-                
-                $appt['time_slot_ist'] = $ist_time->format('Y-m-d H:i'); // Format for display
-                $filtered_appointments[] = $appt;
-            }
-            
-        } catch (Exception $e) {
-            // Log issues with date parsing if any
-            error_log("Date Parsing Error for Appointment #{$appt['id']}: " . $e->getMessage());
-        }
-    }
-    
-    return $filtered_appointments;
-}
-
-// Logic to call the fetching function
-if (isset($con) && !$db_error) {
-    $appointments = fetchAppointments($con, $faculty_id);
 } else {
-    // If $con is not set, or there was a connection error
-    $db_error = $db_error ?? "Database connection (\$con) not found or failed.";
+    $db_error = $db_error ?? "Database connection not found or failed.";
 }
-
-
-// -----------------------------------------------------------
-// --- REMOVED: POST REQUEST HANDLER ---
-// -----------------------------------------------------------
-// The POST handler block was here, but has been removed.
+// ----------------------------------------------------------------------
 
 
 // -----------------------------------------------------------
@@ -192,22 +181,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET['action'])) {
         }
     }
     
-    // --- 3. Handle 'mark_attendance' ---
+    // --- 3. Handle 'mark_attendance' (UPDATED LOGIC) ---
     elseif ($action === 'mark_attendance' && isset($_GET['status'])) {
         
-        if ($isAttendanceDisabled) {
+        if ($isAttendanceDisabledBySchedule) {
+             $db_error = 'Attendance is disabled today (Weekend or Academic Holiday).';
+        } elseif ($isAttendanceClosedByTime) { 
             $db_error = 'Attendance can only be marked before 10:30 AM.';
+        } elseif ($hasAttendanceBeenMarked) { 
+            $db_error = 'Attendance has already been marked for today.';
         } else {
             $status = filter_input(INPUT_GET, 'status', FILTER_SANITIZE_STRING); 
-            // NOTE: Attendance logic is mocked.
-            // In a real app, you would save this to the database.
-            // For this example, we just reload.
             
-            // Set a temporary success message in the session (optional)
-            $_SESSION['temp_message'] = "Attendance marked as $status.";
+            // SAVE TO DATABASE
             $current_date = date('Y-m-d');
-            $sql="INSERT INTO `attendance`(`faculty_id`, `Attendance`, `Date`) VALUES ('$faculty_id','$status','$current_date')";
+            $safe_status = mysqli_real_escape_string($con, $status); 
+            
+            $sql="INSERT INTO `attendance`(`faculty_id`, `Attendance`, `Date`) VALUES ('$faculty_id','$safe_status','$current_date')";
             $result=mysqli_query($con,$sql);
+            
+            if ($result) {
+                $_SESSION['temp_message'] = "Attendance marked as $status.";
+            } else {
+                error_log("Attendance Insert Error: " . mysqli_error($con));
+                $db_error = 'Failed to mark attendance: Database error.';
+            }
+
             header('Location: faculty_dashboard.php'); // Reload page
             exit;
         }
@@ -355,8 +354,8 @@ if (isset($_SESSION['temp_message'])) {
             font-weight: 600;
             color: white;
         }
-        .status-badge-pending { background-color: var(--pending-color); } /* Added status-badge-pending class */
-        .status-badge-approved { background-color: var(--approved-color); } /* Added status-badge-approved class */
+        .status-badge-pending { background-color: var(--pending-color); } 
+        .status-badge-approved { background-color: var(--approved-color); } 
         
         .appointment-stack p {
             margin-bottom: 4px;
@@ -390,7 +389,7 @@ if (isset($_SESSION['temp_message'])) {
             <h1>Faculty Dashboard</h1>
             <p>Welcome, **<?= htmlspecialchars($faculty_name) ?>**</p>
         </div>
-        <a href="faculty-login.php" class="back-link">
+        <a href="faculty-logout.php" class="back-link">
             <i class="fas fa-sign-out-alt me-1"></i> Logout
         </a>
     </div>
@@ -446,7 +445,13 @@ if (isset($_SESSION['temp_message'])) {
 
                     <?php if ($isAttendanceDisabled): ?>
                         <div id="attendanceMessage" class="mt-3 alert alert-warning py-2">
-                            Attendance marking is closed for today (10:30 AM cutoff).
+                            <?php if ($hasAttendanceBeenMarked): ?>
+                                **Attendance already marked for today.**
+                            <?php elseif ($isAttendanceDisabledBySchedule): ?>
+                                **Attendance is disabled.** Today is a Non-Teaching Day (<?php echo $current_day_name; ?> or Academic Holiday).
+                            <?php elseif ($isAttendanceClosedByTime): ?>
+                                Attendance marking is closed for today (10:30 AM cutoff).
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <div id="attendanceMessage" class="mt-3" style="display:none;"></div>
@@ -461,7 +466,7 @@ if (isset($_SESSION['temp_message'])) {
                 
                 <div id="appointment-list">
                     <?php if (empty($appointments)): ?>
-                        <div class="alert alert-info text-center">No pending or approved appointments found in the last 30 days.</div>
+                        <div class="alert alert-info text-center">No pending or approved appointments found.</div>
                     <?php else: ?>
                         <?php foreach ($appointments as $appointment): ?>
                         <div class="appointment-stack" data-appointment-id="<?= $appointment['id'] ?>">
@@ -473,7 +478,8 @@ if (isset($_SESSION['temp_message'])) {
                             <p><strong>Email:</strong> <a href="mailto:<?= htmlspecialchars($appointment['student_email']) ?>"><?= htmlspecialchars($appointment['student_email']) ?></a></p>
                             <p><strong>Contact:</strong> <?= htmlspecialchars($appointment['contact_number']) ?></p> 
                             <p><strong>Reason:</strong> <?= htmlspecialchars($appointment['reason']) ?></p>
-                            <p><strong>Time Slot (IST):</strong> <?= htmlspecialchars($appointment['time_slot_ist']) ?></p> 
+                            <!-- Updated display to show Date & Time from new columns -->
+                            <p><strong>Date & Time:</strong> <?= htmlspecialchars($appointment['slot_date']) ?> at <?= htmlspecialchars($appointment['slot_time']) ?></p> 
 
                             <div class="mt-3 d-flex justify-content-end gap-2">
                                 <?php if (strtolower($appointment['status']) === 'pending'): ?>
@@ -532,10 +538,6 @@ if (isset($_SESSION['temp_message'])) {
         const appointmentList = document.getElementById('appointment-list');
 
         // --- Appointment Action Handler (Decline Prep) ---
-        // This is the *only* JavaScript needed now.
-        // It catches the click on the "Decline" button simply
-        // to set the hidden 'appointment_id' field in the modal
-        // before the modal opens.
         appointmentList.addEventListener('click', function(e) {
             const button = e.target.closest('.appointment-action');
             if (!button) return;
@@ -550,9 +552,6 @@ if (isset($_SESSION['temp_message'])) {
                 document.getElementById('declineMessage').style.display = 'none';
             }
         });
-        
-        // All other JavaScript (submitAction function, form submit handlers)
-        // has been removed as it's no longer needed.
     });
 </script>
 </body>

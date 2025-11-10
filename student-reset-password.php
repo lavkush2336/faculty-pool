@@ -1,10 +1,12 @@
 <?php
 // student-reset-password.php
 session_start();
+// In a real application, you must check for a valid session or a secure reset token.
 require_once 'db.php';
 
 $error_message = '';
 $success_message = '';
+// Ensure email is available from GET for initial load or POST for submission
 $email = $_GET['email'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -12,56 +14,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    if ($email && $password && $confirm_password) {
-        if ($password !== $confirm_password) {
-            $error_message = 'Passwords do not match.';
+    if (empty($email) || empty($password) || empty($confirm_password)) {
+        $error_message = 'Please fill in all fields.';
+    } elseif ($password !== $confirm_password) {
+        $error_message = 'Passwords do not match.';
+    } elseif (strlen($password) < 8) {
+        $error_message = 'Password must be at least 8 characters long.';
+    } else {
+        // --- Complex Password Validation ---
+        $has_uppercase = preg_match('/[A-Z]/', $password);
+        $has_number = preg_match('/[0-9]/', $password);
+        $has_special = preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password);
+        
+        if (!$has_uppercase) {
+            $error_message = 'Password must contain at least one capital letter.';
+        } elseif (!$has_number) {
+            $error_message = 'Password must contain at least one number.';
+        } elseif (!$has_special) {
+            $error_message = 'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)';
         } else {
-            // Password validation: minimum 8 characters, one special character, one capital letter, one number
-            if (strlen($password) < 8) {
-                $error_message = 'Password must be at least 8 characters long.';
-            } else {
-                $has_uppercase = preg_match('/[A-Z]/', $password);
-                $has_number = preg_match('/[0-9]/', $password);
-                $has_special = preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password);
+            // --- ALL VALIDATIONS PASSED: Proceed to Database Update ---
+            try {
+                // Check if student exists
+                $stmt = $pdo->prepare("SELECT student_id FROM students WHERE email = :email");
+                $stmt->execute([':email' => $email]);
+                $student = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                if (!$has_uppercase) {
-                    $error_message = 'Password must contain at least one capital letter.';
-                } elseif (!$has_number) {
-                    $error_message = 'Password must contain at least one number.';
-                } elseif (!$has_special) {
-                    $error_message = 'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)';
-                } else {
-                try {
-                    // Check if student exists
-                    $stmt = $pdo->prepare("SELECT student_id FROM students WHERE email = :email");
-                    $stmt->execute([':email' => $email]);
-                    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($student) {
+                    // Update password
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("UPDATE students SET password = :password WHERE email = :email");
+                    $stmt->execute([
+                        ':password' => $hashed_password,
+                        ':email' => $email
+                    ]);
                     
-                    if ($student) {
-                        // Update password
-                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare("UPDATE students SET password = :password WHERE email = :email");
-                        $stmt->execute([
-                            ':password' => $hashed_password,
-                            ':email' => $email
-                        ]);
-                        
-                        $success_message = 'Password reset successfully! Redirecting to login page...';
-                        // Redirect to login page after 2 seconds
-                        header("refresh:2;url=student-login.php");
-                    } else {
-                        $error_message = 'Invalid email address.';
-                    }
-                } catch (PDOException $e) {
-                    error_log("Reset Password PDO Error: " . $e->getMessage());
-                    $error_message = 'System Error: Please try again later.';
+                    $success_message = 'Password reset successfully! Redirecting to login page...';
+                    // Redirect to login page after 2 seconds
+                    header("refresh:2;url=student-login.php");
+                } else {
+                    $error_message = 'Invalid email address.';
                 }
+            } catch (PDOException $e) {
+                error_log("Reset Password PDO Error: " . $e->getMessage());
+                $error_message = 'System Error: Please try again later.';
             }
         }
-    } else {
-        $error_message = 'Please fill in all fields.';
     }
-}
+} // End of POST request handler
+
+// Ensure the email hidden field is populated if it came from GET
+$display_email = $_GET['email'] ?? ($_POST['email'] ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -105,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="POST" action="" onsubmit="return validateForm()">
-        <input type="hidden" name="email" value="<?php echo htmlspecialchars($email); ?>">
+        <input type="hidden" name="email" value="<?php echo htmlspecialchars($display_email); ?>">
         
         <div class="form-group">
           <label for="password" class="form-label">
@@ -120,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               placeholder="Enter your new password"
               required
               minlength="8"
-              oninput="validatePassword()"
+              oninput="validatePassword(); checkPasswordMatch();"
             >
             <span class="password-toggle" onclick="togglePassword('password')">
               <i class="fas fa-eye" id="toggleIconPassword"></i>
@@ -259,6 +262,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       
       return true;
     }
+    
+    // Initial validation check on load if fields are pre-filled (useful for error returns)
+    validatePassword();
+    checkPasswordMatch();
   </script>
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> ca5589850a97fbd53a7ac21e6db2745a3ba7ccdd

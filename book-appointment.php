@@ -37,171 +37,279 @@ $faculty['image_url'] = $faculty['Image'] ?: 'https://placehold.co/420x260/A52A2
 // NEW: Prepare formatted SVH hours for display (HH:MM - HH:MM)
 $faculty['svh_hours_display'] = substr($faculty['svh_start_time'], 0, 5) . ' - ' . substr($faculty['svh_end_time'], 0, 5);
 
+
+// -------------------------------------------------------------------------
+// --- ACADEMIC CALENDAR CHECK LOGIC (MODIFIED FOR SELECTED DATE) ---
+// -------------------------------------------------------------------------
+
+date_default_timezone_set('Asia/Kolkata'); // Ensure correct timezone
+$today_ymd = date('Y-m-d'); // Today's date for minimum limit on the calendar
+
+// --- ACADEMIC CALENDAR NON-TEACHING DATES (Manual Extraction from image_8726ba.jpg) ---
+$non_teaching_dates = [
+    '2025-08-15', // Week 2 (Aug) - 15 Fri (H: Holiday)
+    '2025-09-22', // Week 9 (Sept) - 22 Mon (NT)
+    '2025-09-23', // Week 9 (Sept) - 23 Tue (NT)
+    '2025-09-24', // Week 9 (Sept) - 24 Wed (NT)
+    '2025-10-06', // Week 11 (Oct) - 6 Mon (6NT)
+    '2025-10-07', // Week 11 (Oct) - 7 Tue (7H)
+    '2025-10-08', // Week 11 (Oct) - 8 Wed (8H)
+    '2025-11-14', // Week 14 (Nov) - 14 Fri (H)
+    '2025-12-12', // Week 19 (Dec) - 12 Fri (EST/Non-Teaching)
+    '2025-12-13', // Week 19 (Dec) - 13 Sat (EST/Non-Teaching)
+    '2025-12-19', // Week 20 (Dec) - 19 Fri (EST/Non-Teaching)
+    '2025-12-20', // Week 20 (Dec) - 20 Sat (EST/Non-Teaching)
+    '2025-11-24',
+    '2025-11-25',
+];
+
+/**
+ * Checks if a specific date is a weekend, holiday, or non-teaching day.
+ * @param string $date_ymd Date in 'Y-m-d' format.
+ * @return array ['is_disabled' => bool, 'reason' => string]
+ */
+function checkBookingDateStatus($date_ymd, $non_teaching_dates) {
+    if (empty($date_ymd)) {
+        return ['is_disabled' => false, 'reason' => ''];
+    }
+    
+    // Convert Y-m-d to day name (Mon, Tue, Sat, Sun, etc.)
+    $day_name = date('D', strtotime($date_ymd));
+    
+    $is_weekend = ($day_name === 'Sat' || $day_name === 'Sun');
+    $is_academic_non_teaching_day = in_array($date_ymd, $non_teaching_dates);
+
+    if ($is_weekend) {
+        return ['is_disabled' => true, 'reason' => "Weekend ($day_name)"];
+    }
+    if ($is_academic_non_teaching_day) {
+        return ['is_disabled' => true, 'reason' => 'Academic Holiday/Non-Teaching Day'];
+    }
+    
+    return ['is_disabled' => false, 'reason' => ''];
+}
+
+// --- INITIAL ABSENCE CHECK (FOR TODAY'S STATUS MESSAGE ONLY) ---
+// This is separate from the date validation, which runs on the selected date.
+$initial_date_status = checkBookingDateStatus($today_ymd, $non_teaching_dates);
+$isFacultyAbsentToday = $initial_date_status['is_disabled'];
+$absence_reason_today = $initial_date_status['reason'];
+
+if (!$isFacultyAbsentToday) {
+    // Check faculty attendance for today (Only if not a weekend/holiday)
+    try {
+        $stmt_attendance = $pdo->prepare("
+            SELECT Attendance 
+            FROM attendance 
+            WHERE faculty_id = :faculty_id 
+              AND Date = :current_date
+        ");
+        $stmt_attendance->execute([
+            ':faculty_id' => $faculty_id,
+            ':current_date' => $today_ymd
+        ]);
+        $attendance_record = $stmt_attendance->fetch(PDO::FETCH_ASSOC);
+
+        if ($attendance_record) {
+            $status = $attendance_record['Attendance'];
+            if ($status === 'Sick' || $status === 'On Leave') {
+                $isFacultyAbsentToday = true;
+                $absence_reason_today = $status; // 'Sick' or 'On Leave'
+            }
+        }
+    } catch (PDOException $e) {
+        error_log("Attendance Check Error: " . $e->getMessage());
+    }
+}
+// -------------------------------------------------------------------------
+// --- END ACADEMIC CALENDAR CHECK LOGIC (INITIAL) ---
+// -------------------------------------------------------------------------
+
+
 // --- 2. Handle POST for Appointment Booking ---
 $errors = [];
 $success = false;
 $post_data = $_POST; // Store POST data to repopulate form
 
-// Check if the database schema needs updating
-// The table structure is expanded for new fields (student_email, contact_number, slot_time)
-// AND new fields for IP address tracking and status management (IPAddress, status).
+// --- REQUIRED DB SCHEMA UPDATE (SIMULATION) ---
+// Add the new slot_date column if it doesn't exist
+$pdo->exec("
+    ALTER TABLE appointments 
+    ADD COLUMN IF NOT EXISTS slot_date DATE AFTER slot_time
+");
+
+// Ensure full table structure for safety (copied from previous response)
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS appointments (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   faculty_id INT NOT NULL,
   student_name VARCHAR(255) NOT NULL,
-  student_department VARCHAR(255) NOT NULL, 
+  student_email VARCHAR(255) NOT NULL,
+  department VARCHAR(255) NOT NULL, 
   subgroup VARCHAR(16) NOT NULL,
   reason ENUM('paper related','doubt related','project related','other') NOT NULL,
-  
-  /* Existing NEW COLUMNS */
-  student_email VARCHAR(255) NOT NULL,
   contact_number VARCHAR(15) NOT NULL, 
-  slot_time TIME NOT NULL, 
-  
-  /* CUSTOM NEW COLUMNS FOR IP TRACKING AND STATUS */
-  IPAddress VARCHAR(45) NOT NULL, /* Increased size for IPv6 compatibility */
-  status ENUM('pending','approved','cancelled','done') NOT NULL DEFAULT 'pending', 
-  
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  slot_time VARCHAR(50) NOT NULL, 
+  slot_date DATE, /* NEW COLUMN */
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  IPAddress VARCHAR(255) NOT NULL, 
+  status VARCHAR(10) NOT NULL DEFAULT 'pending', 
+  reason1 VARCHAR(500)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
+// We use VARCHAR(50) for slot_time here as per your image, but the standard is TIME.
+// The ALTER above is the key change for the request.
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $faculty_id_post = isset($post_data['faculty_id']) ? (int)$post_data['faculty_id'] : 0;
-    $student_name = trim($post_data['student_name'] ?? '');
-    $student_department = trim($post_data['student_department'] ?? '');
-    $subgroup = trim($post_data['subgroup'] ?? '');
-    $reason = trim($post_data['reason'] ?? '');
     
-    // NEW INPUTS
-    $student_email = trim($post_data['student_email'] ?? '');
-    $contact_number = trim($post_data['contact_number'] ?? '');
-    $slot_time = trim($post_data['slot_time'] ?? ''); // HH:MM from form
-    
-    // CAPTURE IP ADDRESS - Use a function to get the real client IP (more robust for production)
-    // For simplicity and immediate environment, we'll use REMOTE_ADDR.
-    $ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    // --- IMPORTANT: EXTRACT NEW DATE FIELD ---
+    $slot_date = trim($post_data['slot_date'] ?? ''); 
+    $post_data['slot_date'] = $slot_date; // Repopulate field if error occurs
 
-    // --- Validation ---
-    if ($faculty_id_post !== $faculty_id) $errors[] = "Security error: Faculty ID mismatch.";
-    if ($student_name === '') $errors[] = "Student name is required.";
-    if ($student_department === '') $errors[] = "Department is required.";
-    if ($subgroup === '') $errors[] = "Subgroup is required.";
-    
-    // Email validation: must end with thapar.edu
-    if (!filter_var($student_email, FILTER_VALIDATE_EMAIL) || !str_ends_with(strtolower($student_email), '@thapar.edu')) {
-         $errors[] = "Student Email is invalid or must end with @thapar.edu.";
-    }
-    
-    // Contact Number validation: must start with +91 and be 10 digits long (after +91)
-    if (!preg_match('/^\+91[0-9]{10}$/', $contact_number)) {
-        $errors[] = "Contact Number must be in the format +91XXXXXXXXXX (10 digits).";
-    }
+    // --- Validate the Selected Date FIRST ---
+    $booking_date_status = checkBookingDateStatus($slot_date, $non_teaching_dates);
 
-    // Slot time validation (unchanged)
-    $full_slot_time = '';
-    if ($slot_time === '') {
-        $errors[] = "Appointment Time is required.";
+    if ($booking_date_status['is_disabled']) {
+        $errors[] = "Appointment booking is disabled on the selected date. Reason: " . $booking_date_status['reason'] . ".";
+    } elseif ($slot_date === $today_ymd && $isFacultyAbsentToday) {
+        // If they book for TODAY, apply the attendance check
+        $errors[] = "Appointment booking is disabled for today, " . e($faculty['last_name']) . " is marked as " . e($absence_reason_today) . ".";
     } else {
-        // Simple HH:MM check
-        if (!preg_match('/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/', $slot_time)) {
-             $errors[] = "Appointment Time is invalid. Please use HH:MM format.";
-        } else {
-            $full_slot_time = $slot_time . ':00'; // Append seconds for proper database TIME comparison
-            
-            $start = $faculty['svh_start_time'];
-            $end = $faculty['svh_end_time'];
+        // Proceed with validation and booking ONLY if the date is available
+        $faculty_id_post = isset($post_data['faculty_id']) ? (int)$post_data['faculty_id'] : 0;
+        $student_name = trim($post_data['student_name'] ?? '');
+        $student_department = trim($post_data['student_department'] ?? '');
+        $subgroup = trim($post_data['subgroup'] ?? '');
+        $reason = trim($post_data['reason'] ?? '');
+        $student_email = trim($post_data['student_email'] ?? '');
+        $contact_number = trim($post_data['contact_number'] ?? '');
+        $slot_time = trim($post_data['slot_time'] ?? ''); // HH:MM from form
+        
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
-            // Time comparison works directly with HH:MM:SS strings
-            // Check if the selected time is within the range [start_time, end_time]
-            if ($full_slot_time < $start || $full_slot_time > $end) {
-                 $errors[] = "The selected time (" . e($slot_time) . ") is outside the faculty's available hours: " . e(substr($start, 0, 5)) . " to " . e(substr($end, 0, 5)) . ".";
+        // --- Validation ---
+        if ($faculty_id_post !== $faculty_id) $errors[] = "Security error: Faculty ID mismatch.";
+        if ($student_name === '') $errors[] = "Student name is required.";
+        if ($student_department === '') $errors[] = "Department is required.";
+        if ($subgroup === '') $errors[] = "Subgroup is required.";
+        if ($slot_date === '') $errors[] = "Appointment Date is required.";
+        if ($slot_date < $today_ymd) $errors[] = "Appointment Date cannot be in the past.";
+
+        // Email, Contact, Slot time validation (Existing logic, adjusted slightly)
+        if (!filter_var($student_email, FILTER_VALIDATE_EMAIL) || !str_ends_with(strtolower($student_email), '@thapar.edu')) {
+             $errors[] = "Student Email is invalid or must end with @thapar.edu.";
+        }
+        if (!preg_match('/^\+91[0-9]{10}$/', $contact_number)) {
+            $errors[] = "Contact Number must be in the format +91XXXXXXXXXX (10 digits).";
+        }
+        
+        $full_slot_time = '';
+        if ($slot_time === '') {
+            $errors[] = "Appointment Time is required.";
+        } else {
+            if (!preg_match('/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/', $slot_time)) {
+                 $errors[] = "Appointment Time is invalid. Please use HH:MM format.";
+            } else {
+                $full_slot_time = $slot_time . ':00'; 
+                $start = $faculty['svh_start_time'];
+                $end = $faculty['svh_end_time'];
+                
+                // If booking for today, time must be in the future
+                if ($slot_date === $today_ymd && strtotime($slot_time) <= time()) {
+                    $errors[] = "The selected time must be in the future for today's date.";
+                }
+
+                if ($full_slot_time < $start || $full_slot_time > $end) {
+                     $errors[] = "The selected time (" . e($slot_time) . ") is outside the faculty's available hours: " . e(substr($start, 0, 5)) . " to " . e(substr($end, 0, 5)) . ".";
+                }
             }
         }
-    }
-    
-    $allowedReasons = ['paper related','doubt related','project related','other'];
-    if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
-    
-    // --- START CONSTRAINTS CHECK ---
-    if (empty($errors)) {
-        $limit_per_faculty = 1; // Existing: Max 1 active appointment per faculty
-        $limit_total = 5;       // NEW: Max 5 active appointments in total (across all faculty)
         
-        // --- IP ADDRESS LIMIT CHECK (Per Faculty, Limit 1) ---
-        // Count 'active' appointments (status is 'pending' or 'approved') for the current faculty from this IP
-        $stmt_ip_count = $pdo->prepare("
-            SELECT COUNT(*) FROM appointments 
-            WHERE IPAddress = :ip 
-              AND faculty_id = :faculty_id
-              AND status IN ('pending', 'approved') 
-        ");
-        $stmt_ip_count->execute([':ip' => $ip_address, ':faculty_id' => $faculty_id_post]);
-        $ip_bookings = $stmt_ip_count->fetchColumn();
-
-        if ($ip_bookings >= $limit_per_faculty) {
-            $errors[] = "Attempts exceeded for now, try again later. (You have " . $ip_bookings . " active appointments from this device IP for this faculty.)";
-        }
+        $allowedReasons = ['paper related','doubt related','project related','other'];
+        if (!in_array($reason, $allowedReasons, true)) $errors[] = "Please choose a valid reason.";
         
-        // --- STUDENT EMAIL LIMIT CHECK (Per Faculty, Limit 1) ---
+        // --- START CONSTRAINTS CHECK (Unchanged) ---
         if (empty($errors)) {
-            $stmt_email_count = $pdo->prepare("
+            $limit_per_faculty = 1; 
+            $limit_total = 5;       
+            
+            // ... (Existing IP, Email, and Total limit checks remain here) ...
+            
+            // Re-use logic from previous version for brevity (assuming it's present)
+            
+            // --- IP ADDRESS LIMIT CHECK (Per Faculty, Limit 1) ---
+            $stmt_ip_count = $pdo->prepare("
                 SELECT COUNT(*) FROM appointments 
-                WHERE student_email = :email 
+                WHERE IPAddress = :ip 
                   AND faculty_id = :faculty_id
                   AND status IN ('pending', 'approved') 
             ");
-            $stmt_email_count->execute([':email' => $student_email, ':faculty_id' => $faculty_id_post]);
-            $email_bookings = $stmt_email_count->fetchColumn();
+            $stmt_ip_count->execute([':ip' => $ip_address, ':faculty_id' => $faculty_id_post]);
+            $ip_bookings = $stmt_ip_count->fetchColumn();
 
-            if ($email_bookings >= $limit_per_faculty) {
-                $errors[] = "Attempts exceeded for now, try again later. (You have " . $email_bookings . " active appointments with this email address for this faculty.)";
+            if ($ip_bookings >= $limit_per_faculty) {
+                $errors[] = "Attempts exceeded for now, try again later. (You have " . $ip_bookings . " active appointments from this device IP for this faculty.)";
             }
+            
+            // --- STUDENT EMAIL LIMIT CHECK (Per Faculty, Limit 1) ---
+            if (empty($errors)) {
+                $stmt_email_count = $pdo->prepare("
+                    SELECT COUNT(*) FROM appointments 
+                    WHERE student_email = :email 
+                      AND faculty_id = :faculty_id
+                      AND status IN ('pending', 'approved') 
+                ");
+                $stmt_email_count->execute([':email' => $student_email, ':faculty_id' => $faculty_id_post]);
+                $email_bookings = $stmt_email_count->fetchColumn();
+
+                if ($email_bookings >= $limit_per_faculty) {
+                    $errors[] = "Attempts exceeded for now, try again later. (You have " . $email_bookings . " active appointments with this email address for this faculty.)";
+                }
+            }
+
+            // --- COMBINED IP & EMAIL TOTAL LIMIT CHECK (Across all faculty, Limit 5) ---
+            if (empty($errors)) {
+                $stmt_total_count = $pdo->prepare("
+                    SELECT COUNT(*) FROM appointments 
+                    WHERE student_email = :email 
+                      AND IPAddress = :ip 
+                      AND status IN ('pending', 'approved') 
+                ");
+                $stmt_total_count->execute([':email' => $student_email, ':ip' => $ip_address]);
+                $total_bookings = $stmt_total_count->fetchColumn();
+
+                if ($total_bookings >= $limit_total) {
+                    $errors[] = "Appointment limit reached! You have a total of " . $total_bookings . " active appointments across all faculty from this email/device combination.";
+                }
+            }
+            // --- END CONSTRAINTS CHECK ---
         }
 
-        // --- NEW: COMBINED IP & EMAIL TOTAL LIMIT CHECK (Across all faculty, Limit 5) ---
         if (empty($errors)) {
-            // Count 'active' appointments (pending or approved) for the combined IP and Email across *all* faculty
-            $stmt_total_count = $pdo->prepare("
-                SELECT COUNT(*) FROM appointments 
-                WHERE student_email = :email 
-                  AND IPAddress = :ip 
-                  AND status IN ('pending', 'approved') 
+            // --- Database Insertion (UPDATED to include slot_date) ---
+            $ins = $pdo->prepare("
+                INSERT INTO appointments (
+                    faculty_id, student_name,department, subgroup, reason, student_email, contact_number, slot_time, slot_date, IPAddress, status
+                ) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
             ");
-            $stmt_total_count->execute([':email' => $student_email, ':ip' => $ip_address]);
-            $total_bookings = $stmt_total_count->fetchColumn();
-
-            if ($total_bookings >= $limit_total) {
-                $errors[] = "Appointment limit reached! You have a total of " . $total_bookings . " active appointments across all faculty from this email/device combination.";
-            }
+            $ins->execute([
+                $faculty_id_post, 
+                $student_name, 
+                $student_department, 
+                $subgroup, 
+                $reason,
+                $student_email, 
+                $contact_number, 
+                $full_slot_time,
+                $slot_date, // NEW FIELD
+                $ip_address,
+            ]);
+            $success = true;
+            // Clear post data on successful insertion to blank the form
+            $post_data = []; 
         }
-    }
-    // --- END CONSTRAINTS CHECK ---
-
-    if (empty($errors)) {
-        // --- Database Insertion (Updated to include IPAddress and status) ---
-        $ins = $pdo->prepare("
-            INSERT INTO appointments (
-                faculty_id, student_name,department, subgroup, reason, student_email, contact_number, slot_time, IPAddress, status
-            ) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-        ");
-        $ins->execute([
-            $faculty_id_post, 
-            $student_name, 
-            $student_department, 
-            $subgroup, 
-            $reason,
-            $student_email, 
-            $contact_number, 
-            $full_slot_time,
-            $ip_address, // NEW FIELD
-        ]);
-        $success = true;
-        // Clear post data on successful insertion to blank the form
-        $post_data = []; 
     }
 }
 ?>
@@ -450,7 +558,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (!empty($errors)): ?>
           <div class="error">
             <ul style="margin:0 0 0 18px;">
-              <?php foreach($errors as $err): ?><li><?php echo e($err); ?></li><?php endforeach; ?>
+              <?php foreach($errors as $err): ?><li><?php echo $err; ?></li><?php endforeach; ?>
             </ul>
           </div>
         <?php endif; ?>
@@ -461,62 +569,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
+        <?php 
+        // Display the specific unavailability message only if the check for TODAY was made and confirmed
+        if ($isFacultyAbsentToday && !($booking_date_status['is_disabled'] ?? false)): ?>
+            <div class="alert alert-danger text-center p-4">
+                <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                <h5 class="font-bold">Faculty Not Available Today</h5>
+                <p class="mb-0">
+                    Dr. <?php echo e($faculty['last_name']); ?> is marked as **<?php echo e($absence_reason_today); ?>** today. 
+                    Please select a future date to book an appointment.
+                </p>
+            </div>
+        <?php endif; ?>
+        
         <form method="post" id="appointmentForm" novalidate>
-          <input type="hidden" name="faculty_id" value="<?php echo $faculty['faculty_id']; ?>">
+            <input type="hidden" name="faculty_id" value="<?php echo $faculty['faculty_id']; ?>">
 
-          <div class="mb-3">
-            <label class="form-label">Student Name</label>
-            <input type="text" name="student_name" class="form-control" required value="<?php echo e($post_data['student_name'] ?? ''); ?>" placeholder="Your full name">
-          </div>
+            <div class="mb-3">
+              <label class="form-label">Appointment Date</label>
+              <input type="date" name="slot_date" id="slot_date" class="form-control" required 
+                     min="<?php echo $today_ymd; ?>" 
+                     value="<?php echo e($post_data['slot_date'] ?? ''); ?>" 
+                     onchange="updateAvailabilityMessage()"
+              >
+              <div id="date_availability_message" class="mt-2 text-sm"></div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Appointment Time (HH:MM) - <span class="text-red-700 font-bold">Must be between <?php echo substr($faculty['svh_start_time'], 0, 5) . ' and ' . substr($faculty['svh_end_time'], 0, 5); ?></span></label>
+              <input type="time" name="slot_time" class="form-control" required 
+                     value="<?php echo e($post_data['slot_time'] ?? ''); ?>" placeholder="HH:MM" 
+                     min="<?php echo substr($faculty['svh_start_time'], 0, 5); ?>" 
+                     max="<?php echo substr($faculty['svh_end_time'], 0, 5); ?>">
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Student Email (<span class="text-red-700 font-bold">@thapar.edu required</span>)</label>
-            <input type="email" name="student_email" class="form-control" required value="<?php echo e($post_data['student_email'] ?? ''); ?>" placeholder="example@thapar.edu">
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Contact Number (<span class="text-red-700 font-bold">+91XXXXXXXXXX required</span>)</label>
-            <input type="tel" name="contact_number" class="form-control" required value="<?php echo e($post_data['contact_number'] ?? ''); ?>" 
-                   pattern="^\+91[0-9]{10}$" title="Format: +91 followed by 10 digits" placeholder="+91XXXXXXXXXX">
-          </div>
+            <div class="mb-3">
+              <label class="form-label">Student Name</label>
+              <input type="text" name="student_name" class="form-control" required value="<?php echo e($post_data['student_name'] ?? ''); ?>" placeholder="Your full name">
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Appointment Time (HH:MM) - <span class="text-red-700 font-bold">Must be between <?php echo substr($faculty['svh_start_time'], 0, 5) . ' and ' . substr($faculty['svh_end_time'], 0, 5); ?></span></label>
-            <input type="time" name="slot_time" class="form-control" required 
-                   value="<?php echo e($post_data['slot_time'] ?? ''); ?>" placeholder="HH:MM" 
-                   min="<?php echo substr($faculty['svh_start_time'], 0, 5); ?>" 
-                   max="<?php echo substr($faculty['svh_end_time'], 0, 5); ?>">
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Student Department (e.g., CSE, ME)</label>
-            <input type="text" name="student_department" class="form-control" required value="<?php echo e($post_data['student_department'] ?? ''); ?>"
-                   title="Department is required" placeholder="e.g. Computer Science">
-          </div>
+            <div class="mb-3">
+              <label class="form-label">Student Email (<span class="text-red-700 font-bold">@thapar.edu required</span>)</label>
+              <input type="email" name="student_email" class="form-control" required value="<?php echo e($post_data['student_email'] ?? ''); ?>" placeholder="example@thapar.edu">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Contact Number (<span class="text-red-700 font-bold">+91XXXXXXXXXX required</span>)</label>
+              <input type="tel" name="contact_number" class="form-control" required value="<?php echo e($post_data['contact_number'] ?? ''); ?>" 
+                     pattern="^\+91[0-9]{10}$" title="Format: +91 followed by 10 digits" placeholder="+91XXXXXXXXXX">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Student Department (e.g., CSE, ME)</label>
+              <input type="text" name="student_department" class="form-control" required value="<?php echo e($post_data['student_department'] ?? ''); ?>"
+                     title="Department is required" placeholder="e.g. Computer Science">
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Subgroup (e.g., A1B2)</label>
-            <input type="text" name="subgroup" class="form-control" required value="<?php echo e($post_data['subgroup'] ?? ''); ?>"
-                   pattern="^[A-Za-z0-9]{4}$" title="Exactly 4 letters/numbers" maxlength="4" placeholder="A1B2">
-          </div>
+            <div class="mb-3">
+              <label class="form-label">Subgroup (e.g., A1B2)</label>
+              <input type="text" name="subgroup" class="form-control" required value="<?php echo e($post_data['subgroup'] ?? ''); ?>"
+                     pattern="^[A-Za-z0-9]{4}$" title="Exactly 4 letters/numbers" maxlength="4" placeholder="A1B2">
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Reason for Appointment</label>
-            <select name="reason" class="form-select" required>
-              <option value="">-- Select reason --</option>
-              <option value="paper related" <?php if(($post_data['reason'] ?? '')==='paper related') echo 'selected'; ?>>Paper related</option>
-              <option value="doubt related" <?php if(($post_data['reason'] ?? '')==='doubt related') echo 'selected'; ?>>Doubt related</option>
-              <option value="project related" <?php if(($post_data['reason'] ?? '')==='project related') echo 'selected'; ?>>Project related</option>
-              <option value="other" <?php if(($post_data['reason'] ?? '')==='other') echo 'selected'; ?>>Other</option>
-            </select>
-          </div>
+            <div class="mb-3">
+              <label class="form-label">Reason for Appointment</label>
+              <select name="reason" class="form-select" required>
+                <option value="">-- Select reason --</option>
+                <option value="paper related" <?php if(($post_data['reason'] ?? '')==='paper related') echo 'selected'; ?>>Paper related</option>
+                <option value="doubt related" <?php if(($post_data['reason'] ?? '')==='doubt related') echo 'selected'; ?>>Doubt related</option>
+                <option value="project related" <?php if(($post_data['reason'] ?? '')==='project related') echo 'selected'; ?>>Project related</option>
+                <option value="other" <?php if(($post_data['reason'] ?? '')==='other') echo 'selected'; ?>>Other</option>
+              </select>
+            </div>
 
-          <div class="d-flex justify-content-end">
-            <button type="submit" class="submit-btn">
-              <i class="fas fa-calendar-check me-2"></i>Book Appointment
-            </button>
-          </div>
-        </form>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="submit-btn">
+                <i class="fas fa-calendar-check me-2"></i>Book Appointment
+              </button>
+            </div>
+          </form>
       </div>
     </div>
   </div>
@@ -531,49 +662,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
   <script>
-    // client validation for friendly UX
-    document.getElementById('appointmentForm').addEventListener('submit', function(e){
-      const subgroup = this.subgroup.value.trim();
-      const studentEmail = this.student_email.value.trim();
-      const contactNumber = this.contact_number.value.trim();
-      const slotTime = this.slot_time.value.trim(); // NEW
+    // PHP array of non-teaching dates passed to JavaScript for client-side feedback
+    const nonTeachingDates = <?php echo json_encode($non_teaching_dates); ?>;
+    const todayYMD = "<?php echo $today_ymd; ?>";
+    const isFacultyAbsentToday = <?php echo $isFacultyAbsentToday ? 'true' : 'false'; ?>;
+    const todayAbsenceReason = "<?php echo e($absence_reason_today); ?>";
 
-      // Pass PHP variables to JS for client-side validation
-      const startTime = "<?php echo substr($faculty['svh_start_time'], 0, 5); ?>"; // NEW
-      const endTime = "<?php echo substr($faculty['svh_end_time'], 0, 5); ?>"; // NEW
+    function checkDateStatus(date_ymd) {
+        if (!date_ymd) return { isDisabled: false, reason: '' };
 
-      // 1. Subgroup validation
-      if (!/^[A-Za-z0-9]{4}$/.test(subgroup)) {
-        alert("Subgroup must be exactly 4 letters/numbers (e.g., A1B2).");
-        e.preventDefault(); return;
-      }
-      
-      // 2. Email constraint validation
-      if (!studentEmail.toLowerCase().endsWith('@thapar.edu')) {
-        alert("Student Email must end with @thapar.edu.");
-        e.preventDefault(); return;
-      }
-      
-      // 3. Contact Number constraint validation (+91XXXXXXXXXX)
-      if (!/^\+91[0-9]{10}$/.test(contactNumber)) {
-        alert("Contact Number must be in the format +91XXXXXXXXXX (10 digits).");
-        e.preventDefault(); return;
-      }
+        const date = new Date(date_ymd + 'T00:00:00'); // Add time to prevent timezone issues
+        const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
 
-      // 4. Slot Time validation
-      if (slotTime === '') {
-        alert("Appointment Time is required.");
-        e.preventDefault(); return;
-      }
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = nonTeachingDates.includes(date_ymd);
+        
+        if (isWeekend) {
+            return { isDisabled: true, reason: 'Weekend' };
+        }
+        if (isHoliday) {
+            return { isDisabled: true, reason: 'Academic Holiday/Non-Teaching Day' };
+        }
+        if (date_ymd === todayYMD && isFacultyAbsentToday) {
+            return { isDisabled: true, reason: 'Faculty is marked ' + todayAbsenceReason + ' today' };
+        }
+        
+        return { isDisabled: false, reason: '' };
+    }
 
-      // Simple HH:MM string comparison is sufficient for the same day
-      if (slotTime < startTime || slotTime > endTime) {
-        alert("Appointment Time must be between " + startTime + " and " + endTime + ".");
-        e.preventDefault(); return;
-      }
+    function updateAvailabilityMessage() {
+        const slotDateInput = document.getElementById('slot_date');
+        const messageDiv = document.getElementById('date_availability_message');
+        const dateValue = slotDateInput.value;
+
+        if (!dateValue) {
+            messageDiv.innerHTML = '';
+            return;
+        }
+
+        const status = checkDateStatus(dateValue);
+        
+        if (status.isDisabled) {
+            messageDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i> <span class="text-danger font-semibold">Booking Disabled: ${status.reason}.</span>`;
+        } else {
+            messageDiv.innerHTML = '<i class="fas fa-check-circle me-1"></i> <span class="text-success font-semibold">Available for Booking.</span>';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Run initial check if date is pre-filled (e.g., after an error)
+        updateAvailabilityMessage();
+
+        const appointmentForm = document.getElementById('appointmentForm');
+        const slotDateInput = document.getElementById('slot_date');
+        
+        // --- Client-Side Submission Validation (Updated to include date check) ---
+        appointmentForm?.addEventListener('submit', function(e){
+            const slotDate = slotDateInput.value;
+            const status = checkDateStatus(slotDate);
+
+            if (status.isDisabled) {
+                alert(`Booking is disabled on the selected date. Reason: ${status.reason}.`);
+                e.preventDefault();
+                return;
+            }
+            
+            // ... (Existing client validation for subgroup, email, contact, time) ...
+
+            // Only run validation if the form element exists (i.e., not disabled by PHP)
+            const subgroup = this.subgroup.value.trim();
+            const studentEmail = this.student_email.value.trim();
+            const contactNumber = this.contact_number.value.trim();
+            const slotTime = this.slot_time.value.trim(); 
+
+            // Pass PHP variables to JS for client-side validation
+            const startTime = "<?php echo substr($faculty['svh_start_time'], 0, 5); ?>"; 
+            const endTime = "<?php echo substr($faculty['svh_end_time'], 0, 5); ?>"; 
+            const todayYMD_js = "<?php echo $today_ymd; ?>";
+
+
+            // 1. Subgroup validation
+            if (!/^[A-Za-z0-9]{4}$/.test(subgroup)) {
+                alert("Subgroup must be exactly 4 letters/numbers (e.g., A1B2).");
+                e.preventDefault(); return;
+            }
+            
+            // 2. Email constraint validation
+            if (!studentEmail.toLowerCase().endsWith('@thapar.edu')) {
+                alert("Student Email must end with @thapar.edu.");
+                e.preventDefault(); return;
+            }
+            
+            // 3. Contact Number constraint validation (+91XXXXXXXXXX)
+            if (!/^\+91[0-9]{10}$/.test(contactNumber)) {
+                alert("Contact Number must be in the format +91XXXXXXXXXX (10 digits).");
+                e.preventDefault(); return;
+            }
+
+            // 4. Slot Time validation
+            if (slotTime === '') {
+                alert("Appointment Time is required.");
+                e.preventDefault(); return;
+            }
+
+            // Time comparison
+            if (slotTime < startTime || slotTime > endTime) {
+                alert("Appointment Time must be between " + startTime + " and " + endTime + ".");
+                e.preventDefault(); return;
+            }
+            
+            // Time must be in the future if booking for today
+            if (slotDate === todayYMD_js) {
+                const selectedDateTime = new Date(slotDate + 'T' + slotTime + ':00');
+                if (selectedDateTime <= new Date()) {
+                    alert("If booking for today, the selected time must be in the future.");
+                    e.preventDefault(); return;
+                }
+            }
+        });
+
+        AOS && AOS.init && AOS.init({ duration: 700, easing: 'ease-in-out', once: true, offset: 100 });
     });
-
-    AOS && AOS.init && AOS.init({ duration: 700, easing: 'ease-in-out', once: true, offset: 100 });
   </script>
 </body>
 </html>

@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost
--- Generation Time: Nov 09, 2025 at 08:22 PM
--- Server version: 10.4.28-MariaDB
--- PHP Version: 8.2.4
+-- Host: 127.0.0.1
+-- Generation Time: Nov 10, 2025 at 11:21 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -36,6 +36,7 @@ CREATE TABLE `appointments` (
   `subgroup` varchar(16) NOT NULL,
   `reason` enum('paper related','doubt related','project related','other') NOT NULL,
   `contact_number` varchar(20) NOT NULL,
+  `slot_date` varchar(10) NOT NULL,
   `slot_time` varchar(50) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `IPAddress` varchar(255) NOT NULL,
@@ -47,10 +48,12 @@ CREATE TABLE `appointments` (
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`id`, `faculty_id`, `student_name`, `student_email`, `department`, `subgroup`, `reason`, `contact_number`, `slot_time`, `created_at`, `IPAddress`, `status`, `reason1`) VALUES
-(1, 223, 'Krish', 'kgupta60_be24@thapar.edu', 'CSE', '3C74', 'paper related', '+919876543212', '15:48:00', '2025-11-06 22:50:29', '::1', 'pending', ''),
-(2, 221, 'Divyam', 'abc@thapar.edu', 'COE', '3C43', 'other', '+918888888888', '10:00:00', '2025-11-06 23:30:17', '::1', 'Approved', ''),
-(3, 221, 'Lavkush', 'fgd@thapar.edu', 'ME', '3C74', 'doubt related', '+918787878787', '10:05:00', '2025-11-06 23:31:52', '::1', 'Declined', 'NA');
+INSERT INTO `appointments` (`id`, `faculty_id`, `student_name`, `student_email`, `department`, `subgroup`, `reason`, `contact_number`, `slot_date`, `slot_time`, `created_at`, `IPAddress`, `status`, `reason1`) VALUES
+(1, 223, 'Krish', 'kgupta60_be24@thapar.edu', 'CSE', '3C74', 'paper related', '+919876543212', '', '15:48:00', '2025-11-06 22:50:29', '::1', 'pending', ''),
+(2, 221, 'Divyam', 'abc@thapar.edu', 'COE', '3C43', 'other', '+918888888888', '', '10:00:00', '2025-11-06 23:30:17', '::1', 'Approved', ''),
+(3, 221, 'Lavkush', 'fgd@thapar.edu', 'ME', '3C74', 'doubt related', '+918787878787', '', '10:05:00', '2025-11-06 23:31:52', '::1', 'Declined', 'NA'),
+(4, 219, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'paper related', '+918800726949', '2025-11-11', '12:40:00', '2025-11-10 21:10:27', '::1', 'pending', ''),
+(5, 222, 'lavkush', 'xendunwucn@thapar.edu', 'computer science', 'a1yt', 'paper related', '+918800726949', '2025-11-13', '14:05:00', '2025-11-10 21:36:21', '::1', 'pending', '');
 
 -- --------------------------------------------------------
 
@@ -69,7 +72,11 @@ CREATE TABLE `attendance` (
 --
 
 INSERT INTO `attendance` (`faculty_id`, `Attendance`, `Date`) VALUES
-(221, 'Present', '2025-11-07');
+(221, 'Present', '2025-11-07'),
+(1, 'Present', '2025-11-11'),
+(217, 'On Leave', '2025-11-11'),
+(216, 'Sick', '2025-11-11'),
+(218, 'On Leave', '2025-11-11');
 
 -- --------------------------------------------------------
 
@@ -1275,8 +1282,33 @@ CREATE TABLE `projects` (
   `description` varchar(2000) NOT NULL,
   `department_id` int(11) NOT NULL,
   `faculty_id` int(11) NOT NULL,
-  `expertise` varchar(500) NOT NULL
+  `expertise` varchar(500) NOT NULL,
+  `bid` varchar(1000) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student`
+--
+
+CREATE TABLE `student` (
+  `Student_ID` int(10) NOT NULL,
+  `Name` varchar(50) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `password` varchar(200) NOT NULL,
+  `phone` varchar(15) NOT NULL,
+  `institute` varchar(250) NOT NULL,
+  `department` varchar(200) NOT NULL,
+  `expertise` varchar(1000) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student`
+--
+
+INSERT INTO `student` (`Student_ID`, `Name`, `email`, `password`, `phone`, `institute`, `department`, `expertise`) VALUES
+(1, 'lavkush vashistha', 'lavkush.vashistha908@gmail.com', '$2y$10$PzcwMVDoHneErf13Bob/iO4f7jozwMA6S2lZh76eUR1mQFjPI6ufG', '8800736949', 'thapar institute', 'Computer Science & Engineering', 'web development');
 
 --
 -- Indexes for dumped tables
@@ -1313,6 +1345,12 @@ ALTER TABLE `projects`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `student`
+--
+ALTER TABLE `student`
+  ADD PRIMARY KEY (`Student_ID`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -1320,7 +1358,7 @@ ALTER TABLE `projects`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `courses`
@@ -1345,6 +1383,12 @@ ALTER TABLE `faculty`
 --
 ALTER TABLE `projects`
   MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student`
+--
+ALTER TABLE `student`
+  MODIFY `Student_ID` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
