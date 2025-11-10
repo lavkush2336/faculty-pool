@@ -19,7 +19,9 @@ session_start();
 date_default_timezone_set('Asia/Kolkata');
 
 // --- Check if attendance should be disabled (before 10:30 AM IST) ---
-$isAttendanceDisabled = (time() > strtotime('today 10:30'));
+// The original logic checks if time() > strtotime('today 10:30').
+// This means the attendance is DISABLED *after* 10:30 AM.
+$isAttendanceClosedByTime = (time() > strtotime('today 10:30'));
 
 // ---------------------------------------------------------------------------------
 // *** DATABASE CONNECTION (MODIFIED to use mysqli approach as requested) ***
@@ -45,6 +47,28 @@ $faculty_id = $_SESSION['faculty_id'] ?? 101;
 $faculty_name = $_SESSION['faculty_name'] ?? "Dr. Sharma";
 
 $appointments = []; // Array to hold fetched and processed appointments
+
+// --- NEW LOGIC: CHECK IF ATTENDANCE IS ALREADY MARKED TODAY ---
+$hasAttendanceBeenMarked = false;
+
+if (isset($con) && !$db_error) {
+    $current_date = date('Y-m-d');
+    $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
+    
+    // Check if a record exists for today and this faculty member
+    $check_sql = "SELECT COUNT(*) AS count FROM attendance WHERE faculty_id = '$safe_faculty_id' AND Date = '$current_date'";
+    $check_result = mysqli_query($con, $check_sql);
+
+    if ($check_result && mysqli_fetch_assoc($check_result)['count'] > 0) {
+        $hasAttendanceBeenMarked = true;
+    }
+}
+
+// --- FINAL ATTENDANCE DISABLE CONDITION ---
+// Attendance is disabled if:
+// 1. It is past the 10:30 AM cutoff OR
+// 2. The faculty member has already marked attendance today.
+$isAttendanceDisabled = $isAttendanceClosedByTime || $hasAttendanceBeenMarked;
 
 
 /**
@@ -192,22 +216,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET['action'])) {
         }
     }
     
-    // --- 3. Handle 'mark_attendance' ---
+    // --- 3. Handle 'mark_attendance' (UPDATED LOGIC) ---
     elseif ($action === 'mark_attendance' && isset($_GET['status'])) {
         
-        if ($isAttendanceDisabled) {
+        if ($isAttendanceClosedByTime) { // Use the time cutoff only for the error message
             $db_error = 'Attendance can only be marked before 10:30 AM.';
+        } elseif ($hasAttendanceBeenMarked) { // NEW CHECK
+            $db_error = 'Attendance has already been marked for today.';
         } else {
             $status = filter_input(INPUT_GET, 'status', FILTER_SANITIZE_STRING); 
-            // NOTE: Attendance logic is mocked.
-            // In a real app, you would save this to the database.
-            // For this example, we just reload.
             
-            // Set a temporary success message in the session (optional)
-            $_SESSION['temp_message'] = "Attendance marked as $status.";
+            // SAVE TO DATABASE
             $current_date = date('Y-m-d');
-            $sql="INSERT INTO `attendance`(`faculty_id`, `Attendance`, `Date`) VALUES ('$faculty_id','$status','$current_date')";
+            // IMPORTANT: Escaping variables before insertion to prevent SQL injection (though prepared statements are better)
+            $safe_status = mysqli_real_escape_string($con, $status); 
+            
+            $sql="INSERT INTO `attendance`(`faculty_id`, `Attendance`, `Date`) VALUES ('$faculty_id','$safe_status','$current_date')";
             $result=mysqli_query($con,$sql);
+            
+            if ($result) {
+                // Set a temporary success message in the session
+                $_SESSION['temp_message'] = "Attendance marked as $status.";
+            } else {
+                error_log("Attendance Insert Error: " . mysqli_error($con));
+                $db_error = 'Failed to mark attendance: Database error.';
+            }
+
             header('Location: faculty_dashboard.php'); // Reload page
             exit;
         }
@@ -446,7 +480,11 @@ if (isset($_SESSION['temp_message'])) {
 
                     <?php if ($isAttendanceDisabled): ?>
                         <div id="attendanceMessage" class="mt-3 alert alert-warning py-2">
-                            Attendance marking is closed for today (10:30 AM cutoff).
+                            <?php if ($hasAttendanceBeenMarked): ?>
+                                **Attendance already marked for today.**
+                            <?php elseif ($isAttendanceClosedByTime): ?>
+                                Attendance marking is closed for today (10:30 AM cutoff).
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <div id="attendanceMessage" class="mt-3" style="display:none;"></div>
