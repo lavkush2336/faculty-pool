@@ -29,6 +29,9 @@ $db_error = null;
 $success_message = null;
 $error_message = null;
 
+// --- NEW: VIEW ALL TOGGLE CHECK ---
+$view_all = isset($_GET['view_all']) && $_GET['view_all'] === 'true';
+
 // Fetch departments for edit form
 $departments = [];
 try {
@@ -80,7 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
             // Update session
             $_SESSION['student_name'] = $new_name;
             $student_name = $new_name;
-            $success_message = "Profile updated successfully!";
             
             // Refresh page to show updated data
             header('Location: student-dashboard.php?success=1');
@@ -117,84 +119,108 @@ try {
         
         // Add type column to projects table if it doesn't exist
         try {
-            $pdo->exec("ALTER TABLE projects ADD COLUMN type ENUM('project', 'research') DEFAULT 'project'");
+            $pdo->exec("ALTER TABLE projects ADD COLUMN IF NOT EXISTS type ENUM('project', 'research') DEFAULT 'project'");
         } catch (PDOException $e) {
             // Column might already exist, ignore the error
-            if (strpos($e->getMessage(), 'Duplicate column name') === false && strpos($e->getMessage(), 'already exists') === false) {
-                error_log("Error adding type column: " . $e->getMessage());
-            }
         }
         
-        // Fetch projects and research separately matching student's department and expertise
-        // Match by department name (join with departments table) and expertise keywords
-        if ($student_department || $student_expertise) {
-            // Build expertise keywords array for matching
-            $expertise_keywords = [];
-            if ($student_expertise) {
-                $expertise_keywords = array_map('trim', explode(',', strtolower($student_expertise)));
-            }
+        // Prepare expertise keywords for matching
+        $expertise_keywords = [];
+        if ($student_expertise) {
+            $expertise_keywords = array_map('trim', explode(',', strtolower($student_expertise)));
+            // Remove empty strings
+            $expertise_keywords = array_filter($expertise_keywords);
+        }
+        
+        // Function to build query for projects/research
+        $buildQuery = function($type) use ($student_department, $expertise_keywords, $pdo, $view_all) {
             
-            // Function to build query for projects/research
-            $buildQuery = function($type) use ($student_department, $expertise_keywords, $pdo) {
-                $sql = "
-                    SELECT 
-                        p.id,
-                        p.name,
-                        p.description,
-                        p.expertise,
-                        p.department_id,
-                        p.bid,
-                        p.type,
-                        d.department_name,
-                        f.first_name,
-                        f.last_name,
-                        f.email as faculty_email
-                    FROM projects p
-                    LEFT JOIN departments d ON p.department_id = d.id
-                    LEFT JOIN faculty f ON p.faculty_id = f.faculty_id
-                    WHERE (p.type = :type OR (p.type IS NULL AND :type = 'project'))
-                ";
+            $sql = "
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.description,
+                    p.expertise,
+                    p.department_id,
+                    p.bid,
+                    p.type,
+                    d.department_name,
+                    f.first_name,
+                    f.last_name,
+                    f.email AS faculty_email
+                FROM projects p
+                LEFT JOIN departments d ON p.department_id = d.id
+                LEFT JOIN faculty f ON p.faculty_id = f.faculty_id
+                WHERE p.type = :type_val
+            ";
+            
+            $params = [':type_val' => $type];
+            $where_clauses = [];
+            
+            if (!$view_all) {
                 
-                $params = [':type' => $type];
-                
-                // Match by department name
+                // 1. Department Match
                 if ($student_department) {
-                    $sql .= " AND (d.department_name LIKE :dept OR d.department_name = :dept_exact)";
-                    $params[':dept'] = '%' . $student_department . '%';
+                    // Match projects where department name contains student's department name
+                    $where_clauses[] = "d.department_name = :dept_exact";
                     $params[':dept_exact'] = $student_department;
                 }
                 
-                // Match by expertise keywords
+                // 2. Expertise Match (Using OR logic)
                 if (!empty($expertise_keywords)) {
                     $expertise_conditions = [];
                     foreach ($expertise_keywords as $idx => $keyword) {
                         if (!empty($keyword)) {
                             $param_key = ':expertise_' . $idx;
+                            // Match if the project's expertise field contains the student's keyword
                             $expertise_conditions[] = "LOWER(p.expertise) LIKE " . $param_key;
                             $params[$param_key] = '%' . $keyword . '%';
                         }
                     }
                     if (!empty($expertise_conditions)) {
-                        $sql .= " AND (" . implode(' OR ', $expertise_conditions) . ")";
+                        // Combine expertise and department matches with OR
+                        $where_clauses[] = "(" . implode(' OR ', $expertise_conditions) . ")";
                     }
                 }
                 
-                $sql .= " ORDER BY p.id DESC";
-                
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute($params);
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
-            };
+                // Final WHERE clause construction for filtering
+                if (!empty($where_clauses)) {
+                    // Combine department match AND expertise match 
+                    // This is complex. Let's simplify: Match by Department OR by Expertise.
+                    // If no student info exists, don't display anything (handled outside this function).
+                    if ($student_department || !empty($expertise_keywords)) {
+                        $sql .= " AND (" . implode(' OR ', $where_clauses) . ")";
+                    }
+                } else {
+                    // If no student info is available for filtering, force no results when view_all is false
+                    $sql .= " AND 1=0";
+                }
+            } // end if (!$view_all)
             
-            // Fetch projects
+            $sql .= " ORDER BY p.id DESC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            // Apply decoding for display fix
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $decoded_results = [];
+            foreach ($results as $item) {
+                // Decode previously escaped entities for correct display
+                $item['name'] = html_entity_decode($item['name'], ENT_QUOTES, 'UTF-8');
+                $item['description'] = html_entity_decode($item['description'], ENT_QUOTES, 'UTF-8');
+                $item['expertise'] = html_entity_decode($item['expertise'], ENT_QUOTES, 'UTF-8');
+                $decoded_results[] = $item;
+            }
+            return $decoded_results;
+        };
+        
+        // Only fetch if student data is complete enough for initial filtering or if view_all is set
+        if ($view_all || $student_department || $student_expertise) {
             $projects = $buildQuery('project');
-            
-            // Fetch research
             $research = $buildQuery('research');
-        } else {
-            $projects = [];
-            $research = [];
         }
+
     } else {
         $db_error = "Student data not found.";
     }
@@ -630,7 +656,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
         }
         
         /* Button Group Styling */
-        .btn-group {
+        .btn-group-projects {
             box-shadow: 0 4px 15px rgba(139, 0, 0, 0.1);
             border-radius: 25px;
             overflow: hidden;
@@ -638,7 +664,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
             background: rgba(139, 0, 0, 0.05);
         }
         
-        .btn-group .btn {
+        .btn-group-projects .btn {
             border: none;
             border-color: transparent;
             color: var(--primary-color);
@@ -650,14 +676,14 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
             z-index: 1;
         }
         
-        .btn-group .btn.active {
+        .btn-group-projects .btn.active {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
             color: #fff;
             box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
             transform: scale(1.05);
         }
         
-        .btn-group .btn:hover:not(.active) {
+        .btn-group-projects .btn:hover:not(.active) {
             background: rgba(139, 0, 0, 0.1);
             transform: translateY(-2px);
         }
@@ -731,21 +757,6 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
             }
             50% {
                 transform: translateY(-10px);
-            }
-        }
-        
-        /* Smooth Scroll */
-        html {
-            scroll-behavior: smooth;
-        }
-        
-        /* Loading Animation */
-        @keyframes shimmer {
-            0% {
-                background-position: -1000px 0;
-            }
-            100% {
-                background-position: 1000px 0;
             }
         }
         
@@ -846,29 +857,62 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
 
         <div class="col-12 col-md-8">
             <div class="custom-card">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                     <h4 class="text-start mb-0">
                         <i class="fas fa-project-diagram me-2"></i>Projects & Research
                     </h4>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn active" id="btn-projects" onclick="showContent('projects')">
-                            <i class="fas fa-project-diagram me-2"></i>Projects
-                        </button>
-                        <button type="button" class="btn" id="btn-research" onclick="showContent('research')">
-                            <i class="fas fa-flask me-2"></i>Research
-                        </button>
+                    
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- NEW: View All Checkbox -->
+                        <div class="form-check form-switch p-0">
+                            <input class="form-check-input ms-0" type="checkbox" role="switch" id="viewAllSwitch" 
+                                onclick="toggleViewAll(this)" <?= $view_all ? 'checked' : '' ?>>
+                            <label class="form-check-label text-sm text-secondary ms-2" for="viewAllSwitch">
+                                View All (Unfiltered)
+                            </label>
+                        </div>
+                        
+                        <!-- Tabs -->
+                        <div class="btn-group-projects" role="group">
+                            <button type="button" class="btn active" id="btn-projects" onclick="showContent('projects')">
+                                <i class="fas fa-project-diagram me-2"></i>Projects
+                            </button>
+                            <button type="button" class="btn" id="btn-research" onclick="showContent('research')">
+                                <i class="fas fa-flask me-2"></i>Research
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Filter Status Message -->
+                <?php if (!$view_all): ?>
+                    <div class="alert alert-info text-sm py-2 px-3 mb-4">
+                        <i class="fas fa-filter me-2"></i>
+                        Showing results filtered by Department: <strong><?= htmlspecialchars($student_data['department'] ?? 'N/A') ?></strong> and Expertise: <strong><?= htmlspecialchars($student_data['expertise'] ?? 'N/A') ?></strong>.
+                        <?php if (empty($student_data['department']) || empty($student_data['expertise'])): ?>
+                            <br><small class="text-danger">**Warning:** Your profile details are incomplete, which may restrict your results. Click 'Edit Profile' to update.</small>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="alert alert-warning text-sm py-2 px-3 mb-4">
+                        <i class="fas fa-globe me-2"></i>
+                        **Showing ALL Projects and Research (Unfiltered).** Results may not be directly relevant to your profile.
+                    </div>
+                <?php endif; ?>
+
+
+                
                 <!-- Projects Section -->
                 <div id="projects-list" class="content-section">
-                    <?php if (empty($projects)): ?>
+                    <?php if (empty($projects) && !$view_all && (empty($student_data['department']) || empty($student_data['expertise']))): ?>
                         <div class="alert alert-info text-center">
                             <i class="fas fa-info-circle me-2"></i>
-                            No projects found matching your department and expertise. 
-                            <?php if (empty($student_data['department']) || empty($student_data['expertise'])): ?>
-                                <br><small>Please update your profile with your department and expertise to see relevant projects.</small>
-                            <?php endif; ?>
+                            Please update your profile with your department and expertise to see **relevant** projects. Or, check 'View All' to see everything.
+                        </div>
+                    <?php elseif (empty($projects)): ?>
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No projects found matching the current criteria.
                         </div>
                     <?php else: ?>
                         <?php foreach ($projects as $project): ?>
@@ -905,13 +949,15 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 
                 <!-- Research Section -->
                 <div id="research-list" class="content-section" style="display: none;">
-                    <?php if (empty($research)): ?>
+                    <?php if (empty($research) && !$view_all && (empty($student_data['department']) || empty($student_data['expertise']))): ?>
                         <div class="alert alert-info text-center">
                             <i class="fas fa-info-circle me-2"></i>
-                            No research found matching your department and expertise. 
-                            <?php if (empty($student_data['department']) || empty($student_data['expertise'])): ?>
-                                <br><small>Please update your profile with your department and expertise to see relevant research.</small>
-                            <?php endif; ?>
+                            Please update your profile with your department and expertise to see **relevant** research. Or, check 'View All' to see everything.
+                        </div>
+                    <?php elseif (empty($research)): ?>
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No research papers found matching the current criteria.
                         </div>
                     <?php else: ?>
                         <?php foreach ($research as $item): ?>
@@ -1066,6 +1112,21 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
         }, 200);
     }
     
+    function toggleViewAll(checkbox) {
+        // Construct the new URL based on the checkbox state
+        const url = new URL(window.location.href);
+        if (checkbox.checked) {
+            url.searchParams.set('view_all', 'true');
+        } else {
+            url.searchParams.delete('view_all');
+        }
+        // Preserve the currently active tab (optional, but good UX)
+        // Check which button is active and ensure that view_all change doesn't reset it
+        
+        // Reload the page with the new URL
+        window.location.href = url.toString();
+    }
+    
     // Initialize: Show projects by default
     document.addEventListener('DOMContentLoaded', function() {
         showContent('projects');
@@ -1143,6 +1204,14 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 }
             });
         }
+        
+        // Check which tab was active before the reload (for persistence)
+        const activeTab = sessionStorage.getItem('activeTab') || 'projects';
+        showContent(activeTab);
+        
+        // Store active tab on button click
+        document.getElementById('btn-projects').addEventListener('click', () => sessionStorage.setItem('activeTab', 'projects'));
+        document.getElementById('btn-research').addEventListener('click', () => sessionStorage.setItem('activeTab', 'research'));
     });
     
     // Add CSS for ripple effect
@@ -1168,6 +1237,11 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
         }
         .content-section {
             transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
     `;
     document.head.appendChild(style);

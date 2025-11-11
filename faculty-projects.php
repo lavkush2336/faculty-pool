@@ -11,6 +11,21 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 $faculty_id = $_SESSION['faculty_id'];
 $faculty_name = $_SESSION['faculty_name'] ?? 'Faculty';
 $message_html = '';
+$departments = []; // Array to hold department names
+
+// --- START: DEPARTMENT FETCHING ---
+try {
+    // Fetch all department names from the departments table
+    $stmt = $pdo->prepare("SELECT department_name FROM departments ORDER BY department_name ASC");
+    $stmt->execute();
+    $departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    error_log("Error fetching departments: " . $e->getMessage());
+    // Display a warning if departments couldn't be loaded, but let the rest of the page function
+    $message_html = alert_html('Warning: Could not load department list from the database.', 'warning');
+}
+// --- END: DEPARTMENT FETCHING ---
+
 
 // Allowed project file types
 $allowed_project_types = [
@@ -23,10 +38,7 @@ $allowed_project_types = [
 ];
 
 // CRITICAL: Upload directory for bid files
-// $upload_dir is the physical server path for file storage
-// FIX APPLIED HERE: Using DIRECTORY_SEPARATOR for robust path construction.
 $upload_dir = __DIR__ . DIRECTORY_SEPARATOR . 'project_bid' . DIRECTORY_SEPARATOR; 
-// $web_upload_dir is the web accessible path stored in the database
 $web_upload_dir = 'project_bid/'; 
 
 if (!is_dir($upload_dir)) {
@@ -65,22 +77,24 @@ if (isset($_GET['delete_id']) && is_numeric($_GET['delete_id'])) {
 // --- START: Database Update/Insertion Logic (INSERT INTO projects) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_projects'])) { 
     
-    $name = trim(filter_input(INPUT_POST, 'name', FILTER_SANITIZE_FULL_SPECIAL_CHARS));
-    $description = trim(filter_input(INPUT_POST, 'description', FILTER_SANITIZE_FULL_SPECIAL_CHARS));
-    $department_name = trim(filter_input(INPUT_POST, 'department_name', FILTER_SANITIZE_FULL_SPECIAL_CHARS)); 
-    $expertise = trim(filter_input(INPUT_POST, 'expertise', FILTER_SANITIZE_FULL_SPECIAL_CHARS));
-
+    // Using FILTER_SANITIZE_STRING to prevent over-escaping on input.
+    $name = trim(filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING));
+    $description = trim(filter_input(INPUT_POST, 'description', FILTER_SANITIZE_STRING));
+    $department_name = trim(filter_input(INPUT_POST, 'department_name', FILTER_SANITIZE_STRING)); 
+    $expertise = trim(filter_input(INPUT_POST, 'expertise', FILTER_SANITIZE_STRING));
+    $type = trim(filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING)); // *** NEW: Get the type variable ***
+    
     $file_path = null; // Default to null, will hold the BID file path
     $upload_success = true;
     $file_input_name = 'research_and_projects_file'; // Name attribute of the file input
 
-    // 1. Validation check for text fields
-    if ($name === '' || $description === '' || $department_name === '' || $expertise === '') {
+    // 1. Validation check for text fields (including the new type field)
+    if ($name === '' || $description === '' || $department_name === '' || $expertise === '' || $type === '') {
         $message_html = alert_html('Please fill in all required text fields.', 'danger');
         $upload_success = false;
     }
 
-    // 2. File Upload Handling (for the 'bid' column)
+    // 2. File Upload Handling 
     if ($upload_success && isset($_FILES[$file_input_name]) && $_FILES[$file_input_name]['error'] !== UPLOAD_ERR_NO_FILE) {
         if ($_FILES[$file_input_name]['error'] === UPLOAD_ERR_OK) {
             $tmp = $_FILES[$file_input_name]['tmp_name'];
@@ -93,17 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_proj
                 $original = basename($_FILES[$file_input_name]['name']);
                 $ext = pathinfo($original, PATHINFO_EXTENSION);
                 
-                // Renaming file uniquely
                 $safe_name = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', pathinfo($original, PATHINFO_FILENAME));
                 $file_name = time() . '_' . $safe_name . ($ext ? '.' . $ext : '');
 
-                // CRITICAL FIX: Ensure move_uploaded_file uses the full server path with the unique file name
                 $target_file = $upload_dir . $file_name;
 
                 if (move_uploaded_file($tmp, $target_file)) {
-                    $file_path = $web_upload_dir . $file_name; // Store web path in DB
+                    $file_path = $web_upload_dir . $file_name; 
                 } else {
-                    // Added debug output for file movement error
                     $error_msg = "Error moving file. Check folder permissions. Attempted move to: " . $target_file;
                     error_log($error_msg);
                     $message_html = alert_html('Error moving uploaded file. Check folder permissions. (Debug info logged)', 'danger');
@@ -116,20 +127,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_proj
         }
     }
 
+
     // 3. Database Insertion
     if ($upload_success) {
         $dummy_department_id = 1; 
 
         try {
-            // INSERT: Using 'bid' column
-            $stmt = $pdo->prepare("INSERT INTO projects (name, description, department_id, faculty_id, expertise, bid) VALUES (:name, :description, :department_id, :faculty_id, :expertise, :bid)");
+            // Fetch department_id based on department_name
+            $dept_stmt = $pdo->prepare("SELECT id FROM departments WHERE department_name = :name");
+            $dept_stmt->execute([':name' => $department_name]);
+            $dept_row = $dept_stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $final_department_id = $dept_row ? $dept_row['id'] : $dummy_department_id;
+
+
+            // INSERT: Now includes 'type' column and value
+            $stmt = $pdo->prepare("INSERT INTO projects (name, description, department_id, faculty_id, expertise, bid, type) VALUES (:name, :description, :department_id, :faculty_id, :expertise, :bid, :type)");
             $stmt->execute([
                 ':name' => $name,
                 ':description' => $description,
-                ':department_id' => $dummy_department_id,
+                ':department_id' => $final_department_id,
                 ':faculty_id' => $faculty_id,
                 ':expertise' => $expertise,
-                ':bid' => $file_path // Insert file path or NULL
+                ':bid' => $file_path, // Insert file path or NULL
+                ':type' => $type // *** NEW: Bind the type value ***
             ]);
 
             header('Location: faculty-projects.php?success=1'); 
@@ -147,10 +168,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_proj
 // --- START: Database Retrieval/Counting Logic (SELECT from projects) ---
 $my_projects = [];
 try {
-    // Retrieval query: Selecting 'p.bid'
-    $stmt = $pdo->prepare("SELECT p.id, p.name, p.description, p.expertise, p.department_id, p.bid FROM projects p WHERE p.faculty_id = :faculty_id ORDER BY p.id DESC");
+    // Retrieval query: Fetch department name and the new 'type' using JOIN
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.id, 
+            p.name, 
+            p.description, 
+            p.expertise, 
+            p.department_id,
+            d.department_name AS department_name_str,
+            p.bid,
+            p.type /* *** NEW: Fetch the project type *** */
+        FROM projects p 
+        LEFT JOIN departments d ON p.department_id = d.id
+        WHERE p.faculty_id = :faculty_id 
+        ORDER BY p.id DESC
+    ");
     $stmt->execute([':faculty_id' => $faculty_id]);
-    $my_projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $raw_projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // *** FIX APPLIED HERE: Decode HTML entities for display ***
+    foreach ($raw_projects as $project) {
+        // Decode previously escaped entities (like &#039;) so they display correctly.
+        $project['name'] = html_entity_decode($project['name'], ENT_QUOTES, 'UTF-8');
+        $project['description'] = html_entity_decode($project['description'], ENT_QUOTES, 'UTF-8');
+        $project['expertise'] = html_entity_decode($project['expertise'], ENT_QUOTES, 'UTF-8');
+        $my_projects[] = $project;
+    }
+    
 } catch (PDOException $e) {
     error_log('Research and Projects Fetch Error: ' . $e->getMessage()); 
     if ($message_html == '') { 
@@ -178,6 +223,7 @@ function alert_html($msg, $type = 'info') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Faculty Research and Projects — Dashboard</title> <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root{--maroon:#7f1d1d;--maroon-deep:#5b0f0f}
@@ -258,13 +304,20 @@ function alert_html($msg, $type = 'info') {
                             <div class="flex justify-between items-start">
                                 <h3 class="text-xl font-bold text-[#7f1d1d]"><?php echo htmlspecialchars($project['name']); ?></h3>
                                 <div class="text-xs font-medium text-white bg-gray-500 px-3 py-1 rounded-full shadow-sm">
-                                    Dept ID: <?php echo htmlspecialchars($project['department_id'] ?: 'N/A'); ?>
+                                    Department: <?php echo htmlspecialchars($project['department_name_str'] ?: ('ID: ' . $project['department_id'])); ?>
                                 </div>
                             </div>
                             
                             <p class="text-gray-600 mt-2 line-clamp-4 text-sm leading-relaxed"><?php echo nl2br(htmlspecialchars($project['description'])); ?></p>
                             
                             <div class="mt-4 flex flex-wrap items-center gap-2">
+                                <?php 
+                                    $type_display = ucfirst($project['type'] ?? 'Unknown');
+                                    $type_color = $project['type'] == 'research' ? 'purple' : 'teal';
+                                ?>
+                                <span class="text-xs font-semibold text-<?php echo $type_color; ?>-700 bg-<?php echo $type_color; ?>-100 px-3 py-1 rounded-full">
+                                    <i class="fas fa-certificate mr-1 text-<?php echo $type_color; ?>-400"></i>Type: <?php echo htmlspecialchars($type_display); ?>
+                                </span>
                                 <span class="text-xs font-semibold text-gray-700 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-tag mr-1 text-gray-400"></i>Expertise: <?php echo htmlspecialchars($project['expertise']); ?></span>
                                 
                                 <?php if (isset($project['bid']) && $project['bid']): ?>
@@ -321,9 +374,25 @@ function alert_html($msg, $type = 'info') {
               <label class="block text-sm font-medium text-slate-700 mb-1">Research and Projects Title</label>
               <input name="name" type="text" maxlength="300" required class="p-3 w-full border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7f1d1d]" placeholder="E.g., Autonomous Drone for Crop Monitoring">
             </div>
+            
             <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">Department (Text)</label>
-              <input name="department_name" type="text" required class="p-3 w-full border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7f1d1d]" placeholder="E.g., Computer Science">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Research/Project Type</label>
+              <select name="type" required class="p-3 w-full border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7f1d1d]">
+                <option value="">-- Select Type --</option>
+                <option value="project">Project</option>
+                <option value="research">Research Paper</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
+              <select name="department_name" required class="p-3 w-full border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7f1d1d]">
+                <option value="">-- Select Department --</option>
+                <?php foreach ($departments as $dept): ?>
+                    <option value="<?php echo htmlspecialchars($dept); ?>">
+                        <?php echo htmlspecialchars($dept); ?>
+                    </option>
+                <?php endforeach; ?>
+              </select>
             </div>
 
             <div class="sm:col-span-2">
@@ -421,9 +490,7 @@ function alert_html($msg, $type = 'info') {
 
     // Function to handle direct Deletion Confirmation
     function deleteProjectConfirmation(projectId) {
-        // Only ask for confirmation once
         if (confirm("Are you sure you want to permanently delete Project ID " + projectId + "? This action cannot be undone.")) {
-            // Redirect to the same page with a query parameter to trigger PHP deletion logic
             window.location.href = 'faculty-projects.php?delete_id=' + projectId;
         }
     }
@@ -436,10 +503,8 @@ function alert_html($msg, $type = 'info') {
             const successCode = urlParams.get('success');
             
             if (successCode === '1') {
-                // Insertion success
                 alert("Success! Your Research and Projects entry has been added to the database.");
             } else if (successCode === '2') {
-                // Deletion success
                 alert("Success! The project has been deleted from the database.");
             }
 
