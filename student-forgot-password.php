@@ -45,7 +45,6 @@ function send_reset_link_email($email, $otp)
                     Reset Password
                 </a>
             </p>
-            <p>Your unique reset code is: <strong>".$otp."</strong></p>
             <p>This link is valid for 10 minutes.</p>
         ";
 
