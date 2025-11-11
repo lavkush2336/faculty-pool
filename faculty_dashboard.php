@@ -1,3 +1,4 @@
+
 <?php
 // --- START: DEBUGGING ENABLED (TEMPORARY FIX FOR BLANK PAGE) ---
 // These three lines force PHP to show all errors on the page.

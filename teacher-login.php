@@ -453,7 +453,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Change Password?
               </a>
               <span class="text-muted">|</span>
-              <a href="forgot-password.php" class="faculty-signup">
+              <a href="teacher-password-email.php" class="faculty-signup">
                 <i class="fas fa-question-circle me-1"></i> Forgot Password
               </a>
             </div>
