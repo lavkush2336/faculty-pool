@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Nov 10, 2025 at 11:21 PM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Host: localhost
+-- Generation Time: Nov 11, 2025 at 11:44 PM
+-- Server version: 10.4.28-MariaDB
+-- PHP Version: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -1309,6 +1309,17 @@ CREATE TABLE `student` (
 
 INSERT INTO `student` (`Student_ID`, `Name`, `email`, `password`, `phone`, `institute`, `department`, `expertise`) VALUES
 (1, 'lavkush vashistha', 'lavkush.vashistha908@gmail.com', '$2y$10$PzcwMVDoHneErf13Bob/iO4f7jozwMA6S2lZh76eUR1mQFjPI6ufG', '8800736949', 'thapar institute', 'Computer Science & Engineering', 'web development');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_otp`
+--
+
+CREATE TABLE `student_otp` (
+  `email` varchar(300) NOT NULL,
+  `otp` int(6) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables
