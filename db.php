@@ -1,12 +1,11 @@
 <?php
-// $DB_HOST = 'sql110.infinityfree.com';
-// $DB_USER = 'if0_40356779';
-// $DB_PASS = 'Divyam2005';
-// $DB_NAME = 'if0_40356779_faculty_pool';
+// db.php - Database Connection Configuration
+
+// ⚠️ CHANGE THESE TO MATCH YOUR LOCAL DATABASE SETUP ⚠️
 $DB_HOST = 'localhost';
-$DB_USER = 'root';
-$DB_PASS = '';
-$DB_NAME = 'faculty_pool';
+$DB_USER = 'root'; 
+$DB_PASS = ''; // ⬅️ COMMON FIX: Try 'root' or use the actual password you set
+$DB_NAME = 'faculty_pool'; 
 $DB_CHARSET = 'utf8mb4';
 
 $dsn = "mysql:host=$DB_HOST;dbname=$DB_NAME;charset=$DB_CHARSET";
@@ -19,8 +18,10 @@ $options = [
 try {
     $pdo = new PDO($dsn, $DB_USER, $DB_PASS, $options);
 } catch (PDOException $e) {
-    header('Content-Type: application/json', true, 500);
-    echo json_encode(['error' => 'Database connection failed', 'message' => $e->getMessage()]);
-    exit;
+    // This forced error message is your only window into the MySQL failure.
+    die("<h1>❌ DATABASE CONNECTION FAILED!</h1>
+         <p>Please check your MySQL server status and the credentials in <b>db.php</b>.</p>
+         <p><b>Error Detail:</b> " . $e->getMessage() . "</p>
+         <p><b>Configuration Used:</b> User={$DB_USER}, DB={$DB_NAME}</p>");
 }
 ?>

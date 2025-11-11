@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Nov 11, 2025 at 11:44 PM
+-- Generation Time: Nov 12, 2025 at 12:48 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -1283,7 +1283,8 @@ CREATE TABLE `projects` (
   `department_id` int(11) NOT NULL,
   `faculty_id` int(11) NOT NULL,
   `expertise` varchar(500) NOT NULL,
-  `bid` varchar(1000) NOT NULL
+  `bid` varchar(1000) NOT NULL,
+  `type` enum('project','research') DEFAULT 'project'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1308,7 +1309,8 @@ CREATE TABLE `student` (
 --
 
 INSERT INTO `student` (`Student_ID`, `Name`, `email`, `password`, `phone`, `institute`, `department`, `expertise`) VALUES
-(1, 'lavkush vashistha', 'lavkush.vashistha908@gmail.com', '$2y$10$PzcwMVDoHneErf13Bob/iO4f7jozwMA6S2lZh76eUR1mQFjPI6ufG', '8800736949', 'thapar institute', 'Computer Science & Engineering', 'web development');
+(1, 'lavkush vashistha', 'lavkush.vashistha908@gmail.com', '$2y$10$PzcwMVDoHneErf13Bob/iO4f7jozwMA6S2lZh76eUR1mQFjPI6ufG', '8800736949', 'thapar institute', 'Computer Science & Engineering', 'web development'),
+(2, 'Krish gupta', 'krishgupta0072@gmail.com', '$2y$10$FRQWCMaEGT6tcZeMfnHvmOVaLc2Xu6asQfnnv1vydjfS4vcgzJN6C', '9336772455', 'TIET', 'Computer Science & Engineering', 'WEB DEV');
 
 -- --------------------------------------------------------
 
@@ -1318,7 +1320,8 @@ INSERT INTO `student` (`Student_ID`, `Name`, `email`, `password`, `phone`, `inst
 
 CREATE TABLE `student_otp` (
   `email` varchar(300) NOT NULL,
-  `otp` int(6) NOT NULL
+  `otp` int(6) NOT NULL,
+  `expiry` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1362,6 +1365,12 @@ ALTER TABLE `student`
   ADD PRIMARY KEY (`Student_ID`);
 
 --
+-- Indexes for table `student_otp`
+--
+ALTER TABLE `student_otp`
+  ADD PRIMARY KEY (`email`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -1399,7 +1408,7 @@ ALTER TABLE `projects`
 -- AUTO_INCREMENT for table `student`
 --
 ALTER TABLE `student`
-  MODIFY `Student_ID` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `Student_ID` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
