@@ -104,50 +104,141 @@ $conn->close();
 
     /* Styling for the form container */
     .student-form-container {
-     max-width: 60%;
-    width: 90%;
-    padding: 63px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin: 20px 0;
-    /* ADDED: Set position relative so the back button stays inside it */
-    position: relative; 
+      max-width: 60%;
+      width: 90%;
+      padding: 63px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.4);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+      margin: 56px 0 20px; /* add top margin so the fixed back button never overlaps */
+      position: relative; 
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      min-height: 80vh; /* make the div taller vertically */
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* center contents vertically within the taller card */
+    }
+    .student-form-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #8B0000, #A52A2A, #8B0000);
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+    }
+    .student-form-container:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16);
     }
     
     /* Style adjustments for the title to match the screenshot */
     .student-form-container h2 {
-        color: #B91C1C !important; /* Matches the button and image color */
-        margin-bottom: 25px; /* Increase spacing below the title */
+      color: #B91C1C !important; 
+      margin-bottom: 25px; 
     }
     
     /* Match the color and style for the form button */
     .btn.bg-red-700 {
-        background-color: #B91C1C !important;
-        border-color: #B91C1C !important;
+      background-color: #B91C1C !important;
+      border-color: #B91C1C !important;
+      box-shadow: 0 6px 18px rgba(185, 28, 28, 0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .btn.bg-red-700:hover {
-        background-color: #991b1b !important;
-        border-color: #991b1b !important;
+      background-color: #991b1b !important;
+      border-color: #991b1b !important;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(185, 28, 28, 0.35);
+    }
+    .btn.bg-red-700:active {
+      transform: translateY(0);
     }
 
     /* --- ADDED: Styles for the Back Button (from faculty-login.php) --- */
     .back-to-home {
-      position: absolute;
-      top: 2rem;
-      left: 2rem;
+      position: fixed;
+      top: 0.75rem;
+      left: 0.75rem;
       color: #8B0000;
       text-decoration: none;
       font-weight: 600;
       transition: all 0.3s ease;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
+      background: rgba(255,255,255,0.7);
+      padding: 0.35rem 0.6rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.6);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
     }
 
     .back-to-home:hover {
       color: #A52A2A;
       transform: translateX(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+    .form-select {
+      background: rgba(255,255,255, 0.95);
+      border: 2px solid rgba(139, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    .form-select:focus {
+      outline: none;
+      border-color: #8B0000;
+      box-shadow: 0 0 0 4px rgba(139, 0, 0, 0.18);
+      background: #fff;
+    }
+    
+    /* --- Responsive tweaks for student page (CSS-only) --- */
+    @media (max-width: 992px) {
+      .student-form-container {
+        max-width: 80%;
+        padding: 48px;
+        min-height: 75vh;
+        margin-top: 48px; /* keep safe space for fixed back button */
+      }
+      .student-form-container h2 { font-size: 1.75rem; }
+    }
+
+    @media (max-width: 768px) {
+      .student-form-container {
+        max-width: 92%;
+        padding: 36px;
+        border-radius: 12px;
+        min-height: 70vh;
+        margin-top: 44px; /* safe space on tablet */
+      }
+      .student-form-container::before { height: 3px; }
+      .back-to-home { position: fixed; top: 0.75rem; left: 0.75rem; font-size: 0.9rem; padding: 0.32rem 0.55rem; }
+      /* Prevent iOS/Android zoom on focus: keep inputs >= 16px */
+      .form-select { padding: 0.65rem 0.9rem; font-size: 16px; }
+      select, input, textarea { font-size: 16px; }
+      .btn.bg-red-700 { padding: 0.65rem 0.9rem; font-size: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .student-form-container {
+        max-width: 96%;
+        padding: 24px;
+        min-height: 68vh;
+        margin-top: 40px; /* safe space on mobile */
+      }
+      .student-form-container h2 { font-size: 1.5rem; }
+      .back-to-home { gap: 0.35rem; padding: 0.28rem 0.5rem; font-size: 0.85rem; }
+      /* Ensure minimum 16px font-size on small phones as well */
+      .form-select, select, input, textarea { font-size: 16px; }
+      .btn.bg-red-700 { font-size: 16px; }
     }
   </style>
 </head>

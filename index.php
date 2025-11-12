@@ -5,7 +5,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=5.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Faculty Pool - Thapar Institute of Engineering & Technology. Join our distinguished academic community and explore teaching opportunities.">
   <meta name="keywords" content="faculty, recruitment, teaching, research, Thapar University, TIET, academic positions">
   <meta name="author" content="Thapar Institute of Engineering & Technology">
@@ -100,6 +100,7 @@
         <div class="flex-card cursor-pointer" onclick="showPrograms(event)">
           <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-user-tie"></i></div>
           <div class="text-3xl font-semibold text-primary-400 mb-4">Teacher's Domain</div>
+          <div class="text-1xl font-semibold mb-4">"Sign in to manage classes, research, and appointments"</div>
         </div>
         </a>
         
@@ -107,6 +108,7 @@
           <div class="flex-card cursor-pointer">
             <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-user"></i></div>
             <div class="text-3xl font-semibold text-primary-400 mb-4">Student's Domain</div>
+            <div class="text-1xl font-semibold mb-4">"Explore faculty, apply to projects, and track progress"</div>
           </div>
         </a>
         
@@ -114,6 +116,7 @@
           <div class="flex-card cursor-pointer">
             <div class="text-4xl text-primary-600 mb-6"><i class="fas fa-flask"></i></div>
             <div class="text-3xl font-semibold text-primary-400 mb-4">Research/Project</div>
+            <div class="text-1xl font-semibold mb-4">"Discover research opportunities and live projects"</div>
           </div>
         </a>
       </div>

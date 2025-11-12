@@ -386,7 +386,7 @@ if (isset($_SESSION['temp_message'])) {
             text-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
         .dashboard-header p { opacity: 0.9; margin-bottom: 0; }
-        .back-link { color: #fff; text-decoration: none; font-weight: 600; opacity: 0.95; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); }
+        .back-link { color: #fff; text-decoration: none; font-weight: 600; opacity: 0.95; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); font-size: 0.9rem; }
         .back-link:hover { opacity: 1; background: rgba(255,255,255,0.12); color: #fff; }
 
         /* ------------------- MAIN CONTENT CARDS ------------------- */
@@ -445,6 +445,29 @@ if (isset($_SESSION['temp_message'])) {
         /* Modal Styling */
         #declineModal .modal-header { background: var(--primary-color); color: white; }
         #declineModal .modal-footer .btn-danger { background-color: var(--primary-color); border-color: var(--primary-color); }
+
+        /* Responsive improvements */
+        @media (max-width: 992px) {
+            .dashboard-header { padding: 18px 24px; }
+            .content-area { padding: 0 24px 36px; }
+            .back-link { padding: 6px 9px; font-size: 0.85rem; }
+        }
+        @media (max-width: 768px) {
+            .dashboard-header { padding: 14px 16px; }
+            .dashboard-header h1 { font-size: 1.5rem; }
+            .content-area { padding: 0 16px 28px; }
+            .custom-card { padding: 20px; border-radius: 16px; }
+            .appointment-stack p strong { width: 96px; }
+            .back-link { padding: 5px 8px; font-size: 0.82rem; }
+        }
+        @media (max-width: 576px) {
+            .dashboard-header { padding: 12px 12px; }
+            .content-area { padding: 0 12px 20px; }
+            .custom-card { padding: 16px; border-radius: 14px; }
+            .appointment-stack { padding: 12px; }
+            .appointment-stack .status-badge { top: 10px; right: 10px; font-size: 0.7rem; }
+            .back-link { padding: 5px 8px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body>

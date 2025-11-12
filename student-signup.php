@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <style>
     /* Custom styles to match the theme of the other files */
     .font-poppins { font-family: 'Poppins', sans-serif; }
-    .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f8f9fa; padding: 20px 0; }
+    .login-container { position: relative; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f8f9fa; padding: 20px 0; }
     .login-card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; }
     .form-group { margin-bottom: 20px; }
     .form-label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; text-align: left; }
@@ -142,8 +142,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .login-links { text-align: center; margin-top: 20px; font-size: 0.9rem; }
     .login-links a { color: #8B0000; text-decoration: none; }
     .login-links a:hover { text-decoration: underline; }
-    .back-to-home { position: absolute; top: 20px; left: 20px; color: #8B0000; text-decoration: none; font-weight: 500; }
-    .back-to-home:hover { text-decoration: underline; }
+    .back-to-home { position: absolute; top: 72px; left: 16px; color: #8B0000; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.06); padding: 6px 10px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.08); z-index: 1000; font-size: 0.9rem; }
+    .back-to-home:hover { text-decoration: none; background: #fff; box-shadow: 0 5px 14px rgba(0,0,0,0.12); }
+    @media (max-width: 768px) { .back-to-home { top: 64px; left: 12px; font-size: 0.85rem; padding: 5px 9px; } }
+    @media (max-width: 480px) { .back-to-home { top: 56px; left: 10px; font-size: 0.82rem; padding: 5px 8px; } }
   </style>
 </head>
 <body class="font-poppins">

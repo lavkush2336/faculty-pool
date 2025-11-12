@@ -378,7 +378,7 @@ if ($view_mode === 'projects') {
     .app-meta span { display: block; font-size: 0.85rem; color: #555; margin-bottom: 5px; }
     .app-meta strong { font-weight: 600; color: #333; margin-right: 5px;}
     .app-cv-link { font-weight: 600; }
-    .header-link { padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+    .header-link { padding: 6px 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; font-size: 0.9rem; }
 
     /* Dashboard-like header (matched to student dashboard theme) */
     .dashboard-header{background:linear-gradient(135deg,var(--primary-color) 0%,var(--primary-light) 100%); color:#fff; box-shadow:0 10px 30px rgba(139,0,0,0.25);}
@@ -408,13 +408,26 @@ if ($view_mode === 'projects') {
     @media (max-width: 768px){
       .dashboard-header .title{font-size:1.35rem}
       .dashboard-header .max-w-7xl{flex-wrap: wrap; gap: .75rem}
-      .header-link{padding:6px 10px}
+      .header-link{padding:5px 8px; font-size:.85rem}
       .custom-card{padding:18px; border-radius:16px}
       .project-list-item .text-xl{font-size:1.05rem}
     }
     @media (max-width: 640px){
       .content-area{padding: 0 12px 20px}
       .card.custom-card{padding:16px}
+    }
+    /* Extra-small devices */
+    @media (max-width: 480px){
+      .dashboard-header .max-w-7xl{flex-wrap: wrap; gap: .5rem}
+      .header-link{padding:5px 8px; font-size: .8rem}
+      .content-area{padding: 0 10px 18px}
+      .custom-card{padding:14px; border-radius:14px}
+      .project-list-item .text-xl{font-size:1rem}
+      .app-card{grid-template-columns: 1fr !important}
+    }
+    @media (max-width: 380px){
+      .header-link{padding:5px 8px; font-size:.8rem}
+      .dashboard-header .title{font-size:1.15rem}
     }
     
     /* Modal responsive width */
@@ -428,29 +441,11 @@ if ($view_mode === 'projects') {
     <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-4">
-<<<<<<< HEAD
-            <i class="fas fa-microscope text-2xl"></i>
-            <h1 class="text-xl font-bold">
-                Research & Projects
-            </h1>
-=======
-            <a href="index.php" class="header-link">
-                <i class="fas fa-home mr-1"></i> Home
-            </a>
-            <!-- NEW: Welcome and Faculty Name -->
->>>>>>> 2c24b7f (kdnlkcndsklcndslk)
-            <span class="text-sm opacity-80 border-l border-white/50 pl-4">
-                Welcome, <strong><?php echo htmlspecialchars($faculty_name); ?></strong>
-            </span>
+            <span class="text-sm opacity-80 border-l border-white/50 pl-4">Welcome, <strong><?php echo htmlspecialchars($faculty_name); ?></strong></span>
         </div>
       </div>
       <div class="flex items-center gap-3">
-<<<<<<< HEAD
         <a href="index.php" class="header-link text-white border border-white hover:bg-white hover:text-[#7f1d1d] transition">
-=======
-        <!-- NEW: Home Button -->
-        <a href="index.php" class="header-link transition">
->>>>>>> 2c24b7f (kdnlkcndsklcndslk)
             <i class="fas fa-home mr-1"></i> Home
         </a>
         <a href="faculty-projects.php?view=projects" class="header-link text-sm rounded-lg transition <?php echo $view_mode === 'projects' ? 'bg-white !text-[#7f1d1d]' : ''; ?>">

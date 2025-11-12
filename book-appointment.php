@@ -359,6 +359,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .label-strong { color:#8B0000; font-weight:700; margin-top:8px; margin-bottom:6px; display:block; font-size:0.9rem; text-transform:uppercase; }
     .faculty-special { color:#333; line-height:1.5; font-size:0.95rem; }
 
+    /* Mobile responsiveness to ensure description is visible without excessive image height */
+    @media (max-width: 768px) {
+      .layout { gap: 20px; }
+      .left-card { flex: 0 0 100%; }
+      .faculty-image { height: 320px; }
+      .faculty-body { padding:16px; }
+    }
+    @media (max-width: 480px) {
+      .layout { gap: 16px; }
+      .faculty-image { height: 240px; }
+      .faculty-name { font-size: 1.4rem; }
+      .faculty-title { font-size: 0.95rem; }
+      .faculty-special { font-size: 0.92rem; line-height: 1.6; }
+    }
+
     /* right form card */
     .form-card { flex:1; background:#fff; padding:30px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.04); }
     .form-card h4 { margin-bottom:20px; color:#8B0000; font-weight:700; font-size:1.5rem; }
@@ -710,11 +725,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     document.addEventListener('DOMContentLoaded', function() {
+        // Ensure AOS animations reveal elements (cards/descriptions)
+        if (window.AOS && typeof AOS.init === 'function') {
+            AOS.init({ duration: 700, easing: 'ease-in-out', once: true, offset: 100 });
+        }
         // Run initial check if date is pre-filled (e.g., after an error)
         updateAvailabilityMessage();
 
         const appointmentForm = document.getElementById('appointmentForm');
         const slotDateInput = document.getElementById('slot_date');
+        const contactInput = document.querySelector('input[name="contact_number"]');
+        
+        // --- Set '+91' by default and enforce prefix for contact number ---
+        if (contactInput) {
+            // Initialize default if empty
+            if (!contactInput.value) {
+                contactInput.value = '+91';
+            }
+            // Keep caret after prefix on focus
+            contactInput.addEventListener('focus', () => {
+                if (!contactInput.value || !contactInput.value.startsWith('+91')) {
+                    contactInput.value = '+91';
+                }
+                // place caret at end
+                const end = contactInput.value.length;
+                requestAnimationFrame(() => contactInput.setSelectionRange(end, end));
+            });
+            // Prevent deleting the '+91' prefix
+            contactInput.addEventListener('keydown', (e) => {
+                const selStart = contactInput.selectionStart ?? 0;
+                if ((e.key === 'Backspace' && selStart <= 3) || (e.key === 'Delete' && selStart < 3)) {
+                    e.preventDefault();
+                }
+            });
+            // Sanitize and enforce +91 followed by up to 10 digits while typing
+            contactInput.addEventListener('input', () => {
+                let v = contactInput.value.replace(/[^0-9+]/g, '');
+                if (!v.startsWith('+91')) {
+                    v = '+91' + v.replace(/\D/g, '').replace(/^91/, '');
+                }
+                const digits = v.replace('+91', '').replace(/\D/g, '');
+                contactInput.value = '+91' + digits.slice(0, 10);
+            });
+        }
+
+        // --- Auto-set month/year on first calendar click (set to today on first focus) ---
+        let dateAutoSet = false;
+        slotDateInput?.addEventListener('focus', () => {
+            if (!dateAutoSet && !slotDateInput.value) {
+                slotDateInput.value = todayYMD;
+                updateAvailabilityMessage();
+                dateAutoSet = true;
+            }
+        });
         
         // --- Client-Side Submission Validation (Updated to include date check) ---
         appointmentForm?.addEventListener('submit', function(e){

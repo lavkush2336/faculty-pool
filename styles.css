@@ -46,7 +46,7 @@ body {
     text-decoration: none;
     font-weight: 500;
     font-size: 0.9rem;
-    padding: 0.8rem 1.2rem;
+    padding: 0.6rem 0.9rem;
     border-radius: 8px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -92,6 +92,8 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    z-index: 1; /* below main-content, above animated background */
+    pointer-events: none; /* prevent hero from blocking clicks below */
 }
 
 .hero-section::before {
@@ -117,6 +119,7 @@ body {
     color: white;
     z-index: 2;
     position: relative;
+    pointer-events: auto; /* allow selecting/copying hero text if needed */
 }
 
 .hero-title {
@@ -190,7 +193,8 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
+    pointer-events: none; /* never block content below */
+    z-index: 1;
 }
 
 .particle {
@@ -225,6 +229,16 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
+    position: relative; /* ensure it sits above any hero overlays */
+    z-index: 2;
+}
+
+/* Animated background should never block content */
+.animated-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
 }
 
 /* Original Flex Card Styles - Keeping the original design */
@@ -241,7 +255,8 @@ body {
     transition: all 0.3s ease;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    position: relative;
+    position: relative; /* create stacking context above hero */
+    z-index: 3;
     overflow: hidden;
     min-height: 280px;
     animation: cardFloat 0.8s ease-out both;
@@ -285,6 +300,7 @@ body {
     /* background: linear-gradient(135deg, rgba(117, 110, 110, 0.868) 0%, rgba(117, 110, 110, 0.868) 100%); */
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none; /* prevent overlay from blocking clicks/overlapping */
 }
 
 .flex-card:hover {
@@ -308,6 +324,9 @@ body {
 .programs-list {
     text-align: center;
 }
+
+/* Ensure cards grid sits above hero */
+#cardsView { position: relative; z-index: 3; }
 
 .section-title {
     font-size: 2.5rem;
@@ -909,9 +928,16 @@ body {
     }
     
     .nav-item {
-        font-size: 0.8rem;
-        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+        padding: 0.5rem 0.8rem;
+        margin: 0 0.1rem;
     }
+    /* Wrap nav rows on small screens with tighter gaps */
+    .creative-nav .mx-auto .flex { flex-wrap: wrap; row-gap: 4px; column-gap: 0.4rem; }
+    
+    /* Reduce main content padding and hero height on tablets */
+    .main-content { padding: 3rem 1.25rem; }
+    .hero-section { height: 320px; }
 }
 
 @media (max-width: 480px) {
@@ -937,6 +963,21 @@ body {
         flex-direction: column;
         gap: 0.5rem;
     }
+    /* Tighter spacing for cards grid and smaller text inside cards */
+    #cardsView { gap: 0.75rem !important; }
+    .flex-card .text-3xl { font-size: 1.25rem !important; }
+    .flex-card .text-4xl { font-size: 1.75rem !important; }
+    .hero-section { height: 240px; }
+    .main-content { padding: 2rem 1rem; }
+    .nav-item { font-size: 0.75rem; padding: 0.45rem 0.6rem; margin: 0; }
+    /* Further tighten gaps between nav items at ~480px */
+    .creative-nav .mx-auto .flex { row-gap: 2px; column-gap: 0.25rem; }
+}
+
+/* Fine-tune for 412px-ish devices (e.g., many Android widths) */
+@media (max-width: 420px) {
+    .hero-section { height: 220px; }
+    #cardsView { margin-top: 0.5rem; }
 }
 
 /* Animation Utilities */
@@ -1356,4 +1397,86 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(139, 0, 0, 0.4);
 }
- 
+
+/* Global Visual Polish (non-structural) */
+:root {
+    --brand: #8B0000;
+    --brand-2: #A52A2A;
+    --bg: #f8fafc;
+    --text: #2d3748;
+    --muted: #6b7280;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --radius: 14px;
+    --shadow-1: 0 8px 24px rgba(0, 0, 0, 0.10);
+    --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+/* Smooth transitions for common interactive elements */
+a, button, .flex-card, .dept-card, .ai-program-card, .research-sub-card, .login-card, .creative-button, .form-control {
+    transition: all 0.3s ease;
+}
+
+/* Subtle hover bounce for key cards */
+@keyframes cardBounce {
+    0% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+    70% { transform: translateY(-2px); }
+    100% { transform: translateY(0); }
+}
+
+.flex-card:hover,
+.dept-card:hover,
+.ai-program-card:hover,
+.research-sub-card:hover,
+.login-card:hover {
+    animation: cardBounce 0.6s ease;
+}
+
+/* Link hover style */
+a { text-underline-offset: 3px; }
+a:hover { text-decoration: underline; }
+
+/* Focus ring for accessibility */
+:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+/* Gradient accents on card top borders */
+.flex-card::before,
+.dept-card::before,
+.ai-program-card::before,
+.research-sub-card::before {
+    background: linear-gradient(90deg, var(--brand), var(--brand-2), var(--brand));
+}
+
+/* Active press feedback */
+button:active,
+.creative-button:active,
+.login-btn:active {
+    transform: translateY(0);
+    filter: saturate(1.05);
+}
+
+/* Table polish (non-structural) */
+table { border-collapse: separate; border-spacing: 0 8px; }
+table thead th { color: var(--brand); font-weight: 700; }
+table tbody tr { background: #fff; box-shadow: var(--shadow-1); }
+table tbody td { padding: 12px 16px; }
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Scrollbar styling (WebKit) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--brand), var(--brand-2)); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { filter: brightness(1.1); }
+
+/* Utilities */
+.small-muted { color: var(--muted); font-size: 0.85rem; }
+.badge-soft { background: linear-gradient(135deg, rgba(139,0,0,0.08), rgba(165,42,42,0.08)); color: var(--brand); border: 1px solid rgba(139,0,0,0.2); padding: 0.25rem 0.6rem; border-radius: 999px; font-weight: 600; }
+.shadow-1 { box-shadow: var(--shadow-1); }
+.shadow-2 { box-shadow: var(--shadow-2); }

@@ -125,7 +125,7 @@ $display_email = $email;
     .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; }
     .back-to-home { position: absolute; top: 20px; left: 20px; color: #8B0000; text-decoration: none; font-weight: 500; }
     .form-group { margin-bottom: 20px; }
-    .form-label { color: #8B0000; font-weight: 600; margin-bottom: 8px; display: block; }
+    .form-label { color: #8B0000; font-weight: 600; margin-bottom: 8px; display: block; text-align: left; }
     .form-control { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; }
     .form-control:focus { outline: none; border-color: #8B0000; box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.5); }
     .login-btn { width: 100%; background-color: #8B0000; color: white; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
@@ -151,7 +151,7 @@ $display_email = $email;
           <i class="fas fa-key"></i>
         </div>
         <h2 class="text-3xl font-bold mb-2" style="color: #8B0000;">Reset Password</h2>
-        <p class="text-gray-600">Enter your new password for: **<?php echo htmlspecialchars($display_email); ?>**</p>
+        <p class="text-gray-600">Enter your new password for: <?php echo htmlspecialchars($display_email); ?></p>
       </div>
 
       <?php if ($error_message): ?>

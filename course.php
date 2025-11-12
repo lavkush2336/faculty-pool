@@ -55,7 +55,7 @@ foreach ($courses as $course) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=5.0, user-scalable=yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="<?php echo e($deptName); ?> - Faculty Pool" />
   <meta name="theme-color" content="#8B0000" />
   <title><?php echo $deptName; ?> - Faculty Pool</title>

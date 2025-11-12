@@ -216,9 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_password'])) {
           </div>
         </div>
 
-        <div class="info-box">
-          <p><i class="fas fa-info-circle"></i> Changing password for: <strong><?php echo htmlspecialchars($display_email); ?></strong></p>
-        </div>
+        
 
         <form id="changePasswordForm" method="post" action="teacher-password-reset.php">
           

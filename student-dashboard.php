@@ -383,13 +383,15 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
         .back-link {
             color: #fff;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             opacity: 0.9;
-            padding: 8px 16px;
+            padding: 6px 10px;
             border-radius: 8px;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255,255,255,0.5);
         }
         
         .back-link::before {
@@ -920,9 +922,23 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
             border: 1px solid #fff;
             color: #fff;
             font-weight: 600;
-            padding: 8px 16px;
+            padding: 6px 10px;
             border-radius: 8px;
             transition: all 0.3s ease;
+        }
+        @media (max-width: 992px) {
+            .back-link { padding: 6px 9px; font-size: 0.85rem; }
+            .btn-home { padding: 6px 9px; font-size: 0.85rem; }
+        }
+        @media (max-width: 768px) {
+            .back-link { padding: 5px 8px; font-size: 0.82rem; }
+            .btn-home { padding: 5px 8px; font-size: 0.82rem; }
+        }
+        @media (max-width: 576px) {
+            .back-link { padding: 5px 8px; font-size: 0.8rem; }
+            .btn-home { padding: 5px 8px; font-size: 0.8rem; }
+        }
+        .btn-home {
             margin-right: 20px; /* Space between home and greeting */
         }
         .btn-home:hover {
