@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f8f9fa; padding: 20px 0; }
     .login-card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; }
     .form-group { margin-bottom: 20px; }
-    .form-label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; }
+    .form-label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; text-align: left; }
     .form-control { border-radius: 8px; border: 1px solid #ddd; padding: 10px 15px; width: 100%; }
     .form-control:focus { border-color: #8B0000; box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); }
     .login-btn { background: #8B0000; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; width: 100%; transition: background-color 0.3s; margin-top: 15px; }

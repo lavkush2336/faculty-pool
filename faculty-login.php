@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .header h2 { color: #8B0000; font-weight: 700; margin-bottom: 10px; }
     .header p { color: #666; margin-bottom: 20px; }
     .form-group { margin-bottom: 20px; position: relative; }
-    .form-label { color: #8B0000; font-weight: 600; margin-bottom: 8px; display: block; }
+    .form-label { color: #8B0000; font-weight: 600; margin-bottom: 8px; display: block; text-align: left; }
     .form-control { width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; transition: all 0.3s ease; background: white; }
     .form-control:focus { outline: none; border-color: #8B0000; box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); }
     .submit-btn { width: 100%; background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%); color: white; border: none; border-radius: 10px; padding: 15px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-bottom: 20px; }

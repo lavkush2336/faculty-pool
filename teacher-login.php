@@ -167,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-weight: 600;
       margin-bottom: 0.5rem;
       display: block;
+      text-align: left; /* ensure left-aligned label before input */
     }
     
     /* New styles for password toggle input group */

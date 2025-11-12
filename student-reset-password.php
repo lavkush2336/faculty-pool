@@ -262,25 +262,8 @@ $display_email = $email;
       const hasNumber = /[0-9]/.test(password);
       const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
       
-      let html = '<div class="mt-2 text-xs">';
-      html += hasMinLength 
-        ? '<div class="text-green-600"><i class="fas fa-check"></i> Min. 8 characters</div>'
-        : '<div class="text-red-600"><i class="fas fa-times"></i> Min. 8 characters</div>';
-      html += hasUppercase 
-        ? '<div class="text-green-600"><i class="fas fa-check"></i> 1 Capital letter</div>'
-        : '<div class="text-red-600"><i class="fas fa-times"></i> 1 Capital letter</div>';
-      html += hasLowercase 
-        ? '<div class="text-green-600"><i class="fas fa-check"></i> 1 Small letter</div>'
-        : '<div class="text-red-600"><i class="fas fa-times"></i> 1 Small letter</div>';
-      html += hasNumber 
-        ? '<div class="text-green-600"><i class="fas fa-check"></i> 1 Number</div>'
-        : '<div class="text-red-600"><i class="fas fa-times"></i> 1 Number</div>';
-      html += hasSpecial 
-        ? '<div class="text-green-600"><i class="fas fa-check"></i> 1 Symbol</div>'
-        : '<div class="text-red-600"><i class="fas fa-times"></i> 1 Symbol</div>';
-      html += '</div>';
-      
-      requirementsDiv.innerHTML = html;
+      // Keep constraints but do not display the checklist text on the page
+      requirementsDiv.innerHTML = '';
     }
 
     function checkPasswordMatch() {

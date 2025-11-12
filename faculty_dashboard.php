@@ -347,160 +347,124 @@ if (isset($_SESSION['temp_message'])) {
     <style>
         :root {
             --primary-color: #8B0000; /* Dark Red/Maroon */
+            --primary-light: #A52A2A;
             --main-bg: #f8f9fa; 
             --card-bg: #ffffff;
             --pending-color: orange;
             --approved-color: #198754; /* Bootstrap success green */
             --danger-color: #dc3545; /* Bootstrap danger red */
+            --border-color: #e0e0e0;
+            --text-primary: #333;
+            --text-secondary: #666;
         }
         
         body {
-            background-color: var(--main-bg);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             min-height: 100vh;
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', Arial, sans-serif;
         }
 
         /* ------------------- HEADER BAR ------------------- */
         .dashboard-header {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
             color: white;
-            padding: 20px 50px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            padding: 24px 50px;
+            box-shadow: 0 6px 20px rgba(139, 0, 0, 0.3);
             margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        .dashboard-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
         }
         .dashboard-header h1 {
-            font-weight: 700;
-            font-size: 1.8rem;
+            font-weight: 800;
+            font-size: 1.9rem;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
-        .dashboard-header p {
-            opacity: 0.8;
-            margin-bottom: 0;
-        }
-        .back-link {
-            color: #fff;
-            text-decoration: none;
-            font-weight: 500;
-            opacity: 0.9;
-        }
-        .back-link:hover {
-            opacity: 1;
-            color: #fff;
-        }
+        .dashboard-header p { opacity: 0.9; margin-bottom: 0; }
+        .back-link { color: #fff; text-decoration: none; font-weight: 600; opacity: 0.95; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); }
+        .back-link:hover { opacity: 1; background: rgba(255,255,255,0.12); color: #fff; }
 
         /* ------------------- MAIN CONTENT CARDS ------------------- */
-        .content-area {
-            padding: 0 50px 50px;
-        }
+        .content-area { padding: 0 50px 50px; }
 
         .custom-card {
-            background-color: var(--card-bg);
+            background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
             border-radius: 20px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
             padding: 25px;
-            border: 1px solid #eee;
-            transition: box-shadow 0.3s;
+            border: 1px solid var(--border-color);
+            position: relative; overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeInUp 0.5s ease both;
         }
-        .custom-card:hover {
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-        }
+        .custom-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg,var(--primary-color),var(--primary-light)); transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
+        .custom-card:hover::before { transform: scaleX(1); }
+        .custom-card:hover { box-shadow: 0 14px 32px rgba(139, 0, 0, 0.15); transform: translateY(-4px); }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }
+
+        /* Bounce hover animation for all cards */
+        @keyframes cardBounce { 0%{transform: translateY(0) scale(1);} 40%{transform: translateY(-6px) scale(1.01);} 70%{transform: translateY(-2px) scale(1.005);} 100%{transform: translateY(0) scale(1);} }
+        .custom-card:hover{ animation: cardBounce .6s ease; }
+        .appointment-stack:hover{ animation: cardBounce .6s ease; }
 
         /* Attendance Card Specifics */
-        #attendance-card {
-            text-align: center;
-        }
-        #attendance-card h4 {
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #333;
-        }
+        #attendance-card { text-align: center; }
+        #attendance-card h4 { font-weight: 700; margin-bottom: 20px; color: var(--text-primary); }
         
-        .btn-theme {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            color: #fff;
-        }
-        .btn-theme:hover {
-            background-color: #A52A2A; 
-            border-color: #A52A2A;
-            color: #fff;
-        }
+        .btn-theme { background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%); border-color: var(--primary-color); color: #fff; box-shadow: 0 6px 16px rgba(139,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .btn-theme:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(139,0,0,0.3); color: #fff; }
+        .btn-theme:active { transform: translateY(0); }
 
-        /* Custom Radio Button Colors (Matching text colors) */
-        .attendance-radio-group .form-check-input:checked[value="Present"] {
-            background-color: var(--approved-color);
-            border-color: var(--approved-color);
-        }
-        .attendance-radio-group .form-check-input:checked[value="On Leave"] {
-            background-color: var(--pending-color);
-            border-color: var(--pending-color);
-        }
-        .attendance-radio-group .form-check-input:checked[value="Sick"] {
-            background-color: var(--danger-color);
-            border-color: var(--danger-color);
-        }
-
+        /* Custom Radio Button Colors and Pills */
+        .attendance-radio-group .form-check { margin-right: 10px; }
+        .attendance-radio-group .form-check-label { padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,0.03); border: 1px solid #e6e6e6; font-weight: 600; }
+        .attendance-radio-group input[type="radio"] { cursor: pointer; }
+        .attendance-radio-group input[type="radio"]:checked + label { color: #fff; border-color: transparent; }
+        .attendance-radio-group .form-check-input:checked[value="Present"] + label { background: var(--approved-color); }
+        .attendance-radio-group .form-check-input:checked[value="On Leave"] + label { background: var(--pending-color); }
+        .attendance-radio-group .form-check-input:checked[value="Sick"] + label { background: var(--danger-color); }
 
         /* Appointment Card Specifics */
-        .appointment-stack {
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            background-color: #fcfcfc;
-            position: relative;
-            transition: opacity 0.3s ease-in-out; 
-        }
+        .appointment-stack { border: 1px solid #ddd; border-radius: 12px; padding: 15px; margin-bottom: 15px; background-color: #fcfcfc; position: relative; transition: opacity 0.3s ease-in-out, transform 0.25s ease, box-shadow 0.25s ease; }
+        .appointment-stack:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(0,0,0,0.08); }
+        .appointment-stack::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: linear-gradient(180deg,var(--primary-color),var(--primary-light)); opacity: .35; border-radius: 12px 0 0 12px; }
 
-        .appointment-stack .status-badge {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            padding: 2px 8px;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: white;
-        }
-        .status-badge-pending { background-color: var(--pending-color); } 
-        .status-badge-approved { background-color: var(--approved-color); } 
+        .appointment-stack .status-badge { position: absolute; top: 15px; right: 15px; padding: 2px 8px; border-radius: 5px; font-size: 0.8rem; font-weight: 700; color: white; }
+        .status-badge-pending { background-color: var(--pending-color); }
+        .status-badge-approved { background-color: var(--approved-color); }
         
-        .appointment-stack p {
-            margin-bottom: 4px;
-            font-size: 0.95rem;
-            color: #555;
-        }
-        .appointment-stack p strong {
-            display: inline-block;
-            width: 110px;
-            color: #333;
-            font-weight: 600;
-        }
+        .appointment-stack p { margin-bottom: 4px; font-size: 0.95rem; color: var(--text-secondary); }
+        .appointment-stack p strong { display: inline-block; width: 110px; color: var(--text-primary); font-weight: 700; }
         
         /* Modal Styling */
-        #declineModal .modal-header {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        /* Make Decline button red but the Submit Reason button theme colored */
-        #declineModal .modal-footer .btn-danger {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
+        #declineModal .modal-header { background: var(--primary-color); color: white; }
+        #declineModal .modal-footer .btn-danger { background-color: var(--primary-color); border-color: var(--primary-color); }
     </style>
 </head>
 <body>
 
 <header class="dashboard-header">
     <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1>Faculty Dashboard</h1>
-            <p>Welcome, **<?= htmlspecialchars($faculty_name) ?>**</p>
+        <div class="d-flex align-items-center gap-3">
+            <a href="index.php" class="back-link me-3">
+                <i class="fas fa-home me-1"></i> Home
+            </a>
+            <div>
+                <h1>Faculty Dashboard</h1>
+                <p>Welcome, <strong><?= htmlspecialchars($faculty_name) ?></strong></p>
+            </div>
         </div>
         <a href="faculty-logout.php" class="back-link">
             <i class="fas fa-sign-out-alt me-1"></i> Logout
         </a>
     </div>
-</header>
+    </header>
 
 <div class="container-fluid content-area">
 
@@ -515,6 +479,11 @@ if (isset($_SESSION['temp_message'])) {
     <div class="row">
         
         <div class="col-12 col-md-4 mb-4">
+            <div class="custom-card text-center mb-4">
+                <div class="mb-2"><i class="fas fa-user-tie fa-3x text-danger"></i></div>
+                <h4 class="mb-1">Welcome</h4>
+                <div class="text-secondary">Hello, <strong><?= htmlspecialchars($faculty_name) ?></strong></div>
+            </div>
             <div id="attendance-card" class="custom-card">
                 <h4>Mark Your Attendance</h4>
                 
@@ -548,7 +517,6 @@ if (isset($_SESSION['temp_message'])) {
                             <i class="fas fa-check-circle me-2"></i> Mark Attendance
                         </button>
                     </fieldset>
-
 
                     <?php if ($isAttendanceDisabled): ?>
                         <div id="attendanceMessage" class="mt-3 alert alert-warning py-2">
@@ -642,6 +610,8 @@ if (isset($_SESSION['temp_message'])) {
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const appointmentList = document.getElementById('appointment-list');
+        const attendanceForm = document.getElementById('attendanceForm');
+        const attendanceMsg = document.getElementById('attendanceMessage');
 
         // --- Appointment Action Handler (Decline Prep) ---
         appointmentList.addEventListener('click', function(e) {
@@ -654,9 +624,25 @@ if (isset($_SESSION['temp_message'])) {
                 const appointmentId = button.getAttribute('data-id');
                 // Prepare the modal before it opens
                 document.getElementById('declineAppointmentId').value = appointmentId;
-                document.getElementById('declineReason').value = ''; 
+                document.getElementById('declineReason').value = '';
                 document.getElementById('declineMessage').style.display = 'none';
             }
+        });
+
+        // --- Attendance selection feedback (no structure/text change) ---
+        attendanceForm?.addEventListener('change', function(e){
+            const selected = attendanceForm.querySelector('input[name="status"]:checked');
+            if (!selected || !attendanceMsg) return;
+            const mapIcon = { 'Present': 'fa-user-check text-success', 'On Leave': 'fa-house-user text-warning', 'Sick': 'fa-bed text-danger' };
+            attendanceMsg.className = 'mt-3 alert alert-info py-2';
+            attendanceMsg.style.display = '';
+            attendanceMsg.innerHTML = `<i class="fas ${mapIcon[selected.value] || 'fa-info-circle'} me-2"></i> Selected: <strong>${selected.value}</strong>. You can now submit to mark attendance.`;
+        });
+
+        // --- Stagger animation for appointments ---
+        const stacks = document.querySelectorAll('.appointment-stack');
+        stacks.forEach((el, idx)=>{
+            el.style.animation = `fadeInUp 0.45s ease ${idx * 60}ms both`;
         });
     });
 </script>

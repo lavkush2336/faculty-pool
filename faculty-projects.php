@@ -364,8 +364,8 @@ if ($view_mode === 'projects') {
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{--maroon:#7f1d1d;--maroon-deep:#5b0f0f}
-    body{font-family:'Poppins',sans-serif;background-color:#f8f9fa;}
+    :root{--maroon:#7f1d1d;--maroon-deep:#5b0f0f;--primary-color:#8B0000;--primary-light:#A52A2A;--border-color:rgba(139,0,0,0.15);--text-primary:#1f2937;--text-secondary:#4b5563;}
+    body{font-family:'Poppins',sans-serif;background:linear-gradient(135deg,#f8fafc 0%,#e0e7ef 50%,#f0f4f8 100%);}
     .card{background:white;box-shadow:0 10px 25px rgba(0,0,0,0.05);border-radius:12px;border:1px solid #e2e8f0}
     .line-clamp-4{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
     .backdrop{background:rgba(2,6,23,0.7)}
@@ -379,52 +379,99 @@ if ($view_mode === 'projects') {
     .app-meta strong { font-weight: 600; color: #333; margin-right: 5px;}
     .app-cv-link { font-weight: 600; }
     .header-link { padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+
+    /* Dashboard-like header (matched to student dashboard theme) */
+    .dashboard-header{background:linear-gradient(135deg,var(--primary-color) 0%,var(--primary-light) 100%); color:#fff; box-shadow:0 10px 30px rgba(139,0,0,0.25);}
+    .dashboard-header .title{font-size:1.75rem; font-weight:800; letter-spacing:0.3px;}
+    .header-link{background:transparent; border:1px solid #fff; color:#fff;}
+    .header-link:hover{background:rgba(255,255,255,0.12); color:#fff; transform: translateY(-1px);} 
+
+    /* Content spacing and cards similar to student dashboard */
+    .content-area{padding: 0 24px 40px;}
+    .custom-card{ background: linear-gradient(145deg,#ffffff 0%,#fafafa 100%); border:1px solid var(--border-color); border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.08);}
+    .custom-card h2,.custom-card h3{color:var(--text-primary)}
+    .info-banner{background: linear-gradient(135deg,#d1ecf1 0%,#bee5eb 100%); color:#0c5460; border-radius:12px; border:none}
+    .empty-state{background:#e2f0f6; border-radius:12px}
+    
+    /* Hover bounce for cards */
+    @keyframes cardBounce { 0%{transform: translateY(0) scale(1);} 40%{transform: translateY(-6px) scale(1.01);} 70%{transform: translateY(-2px) scale(1.005);} 100%{transform: translateY(0) scale(1);} }
+    .custom-card:hover{ animation: cardBounce .6s ease; }
+    .project-list-item:hover{ animation: cardBounce .6s ease; }
+    .app-card:hover{ animation: cardBounce .6s ease; }
+    
+    /* Responsive improvements */
+    @media (max-width: 1024px){
+      .dashboard-header .title{font-size:1.5rem}
+      .content-area{padding: 0 16px 28px}
+      .max-w-7xl{padding-left: 1rem; padding-right: 1rem}
+    }
+    @media (max-width: 768px){
+      .dashboard-header .title{font-size:1.35rem}
+      .dashboard-header .max-w-7xl{flex-wrap: wrap; gap: .75rem}
+      .header-link{padding:6px 10px}
+      .custom-card{padding:18px; border-radius:16px}
+      .project-list-item .text-xl{font-size:1.05rem}
+    }
+    @media (max-width: 640px){
+      .content-area{padding: 0 12px 20px}
+      .card.custom-card{padding:16px}
+    }
+    
+    /* Modal responsive width */
+    @media (max-width: 768px){
+      #projectModal .modal-panel{width:100%; max-width:100%; margin:0 8px}
+    }
   </style>
 </head>
 <body class="min-h-screen">
-  <header class="w-full sticky top-0 z-50 bg-[#7f1d1d] shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between text-white">
+  <header class="w-full sticky top-0 z-50 dashboard-header">
+    <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-4">
+<<<<<<< HEAD
             <i class="fas fa-microscope text-2xl"></i>
             <h1 class="text-xl font-bold">
                 Research & Projects
             </h1>
+=======
+            <a href="index.php" class="header-link">
+                <i class="fas fa-home mr-1"></i> Home
+            </a>
+            <!-- NEW: Welcome and Faculty Name -->
+>>>>>>> 2c24b7f (kdnlkcndsklcndslk)
             <span class="text-sm opacity-80 border-l border-white/50 pl-4">
-                Welcome, **<?php echo htmlspecialchars($faculty_name); ?>**
+                Welcome, <strong><?php echo htmlspecialchars($faculty_name); ?></strong>
             </span>
         </div>
       </div>
       <div class="flex items-center gap-3">
+<<<<<<< HEAD
         <a href="index.php" class="header-link text-white border border-white hover:bg-white hover:text-[#7f1d1d] transition">
+=======
+        <!-- NEW: Home Button -->
+        <a href="index.php" class="header-link transition">
+>>>>>>> 2c24b7f (kdnlkcndsklcndslk)
             <i class="fas fa-home mr-1"></i> Home
         </a>
-        <a href="faculty-projects.php?view=projects" class="header-link text-sm text-white border border-white rounded-lg hover:bg-white hover:text-[#7f1d1d] transition <?php echo $view_mode === 'projects' ? 'bg-[#5b0f0f]' : ''; ?>">
+        <a href="faculty-projects.php?view=projects" class="header-link text-sm rounded-lg transition <?php echo $view_mode === 'projects' ? 'bg-white !text-[#7f1d1d]' : ''; ?>">
             <i class="fas fa-list mr-1"></i>My Projects
         </a>
-        <a href="faculty-projects.php?view=applications" class="header-link text-sm text-white border border-white rounded-lg hover:bg-white hover:text-[#7f1d1d] transition <?php echo $view_mode === 'applications' ? 'bg-[#5b0f0f]' : ''; ?>">
+        <a href="faculty-projects.php?view=applications" class="header-link text-sm rounded-lg transition <?php echo $view_mode === 'applications' ? 'bg-white !text-[#7f1d1d]' : ''; ?>">
             <i class="fas fa-users mr-1"></i>View Student Applications
         </a>
-        <a href="logout.php" class="header-link text-sm text-white border border-white rounded-lg hover:bg-white hover:text-[#7f1d1d] transition">
+        <a href="logout.php" class="header-link text-sm rounded-lg transition">
             <i class="fas fa-sign-out-alt mr-1"></i>Logout
         </a>
       </div>
     </div>
   </header>
-  <main class="max-w-7xl mx-auto px-4 py-8">
+  <main class="max-w-7xl mx-auto px-4 py-8 content-area">
     <?php echo $message_html; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-1 space-y-6">
-            <div class="card p-6 bg-[#7f1d1d] text-white shadow-xl">
-                <p class="text-sm opacity-80 font-medium"><?php echo $view_mode === 'projects' ? 'Total Listed Research and Projects' : 'Total Pending Applications'; ?></p>
-                <p class="text-5xl font-extrabold mt-1">
-                    <?php echo $view_mode === 'projects' ? count($my_projects) : count($student_applications); ?>
-                </p>
-                <p class="text-sm opacity-80 mt-2"><?php echo $view_mode === 'projects' ? 'Manage your academic contributions efficiently.' : 'Review applicants for your listings.'; ?></p>
-            </div>
             
-            <div class="card p-6">
+            <div class="card custom-card p-6">
                 <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fas fa-bolt text-amber-500"></i> Quick Actions</h3>
                 <button id="openModalBtn" class="w-full text-left flex items-center justify-between p-3 rounded-lg text-gray-700 hover:bg-gray-100 transition border mb-2">
                     <span class="font-medium">Add New Research and Projects</span>
@@ -447,7 +494,7 @@ if ($view_mode === 'projects') {
                 <?php if ($view_mode === 'projects'): ?>
                     <?php if (!empty($my_projects)): ?>
                         <?php foreach ($my_projects as $project): ?>
-                            <div class="card p-5 project-list-item transition duration-200">
+                            <div class="card custom-card p-5 project-list-item transition duration-200">
                                 <div class="flex justify-between items-start">
                                     <h3 class="text-xl font-bold text-[#7f1d1d]"><?php echo htmlspecialchars($project['name']); ?></h3>
                                     <div class="text-xs font-medium text-white bg-gray-500 px-3 py-1 rounded-full shadow-sm">
@@ -481,7 +528,7 @@ if ($view_mode === 'projects') {
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="card p-10 text-center col-span-2 bg-gray-50">
+                        <div class="card custom-card p-10 text-center col-span-2 bg-gray-50">
                             <i class="fas fa-folder-open text-6xl text-gray-300"></i>
                             <h3 class="text-2xl font-bold text-gray-700 mt-4">No Research and Projects Listed Yet</h3>
                             <p class="text-gray-500 mt-2">Get started by listing your first research and projects idea to attract students.</p>
@@ -493,7 +540,7 @@ if ($view_mode === 'projects') {
                 <?php else: ?>
                     <?php if (!empty($student_applications)): ?>
                         <?php foreach ($student_applications as $app): ?>
-                            <div class="app-card grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="app-card custom-card grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="md:col-span-1 border-r pr-4">
                                     <h4 class="text-lg font-bold text-gray-800 mb-2">Student Details</h4>
                                     <div class="app-meta">
@@ -540,7 +587,7 @@ if ($view_mode === 'projects') {
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="card p-10 text-center col-span-2 bg-gray-50">
+                        <div class="card custom-card p-10 text-center col-span-2 bg-gray-50">
                             <i class="fas fa-users-slash text-6xl text-gray-300"></i>
                             <h3 class="text-2xl font-bold text-gray-700 mt-4">No Pending Student Applications</h3>
                             <p class="text-gray-500 mt-2">Students will appear here once they apply to your listed projects or research papers.</p>
