@@ -15,7 +15,7 @@ function sendemail_verify($email, $otp)
 {
     // Function definition needed if you were to resend OTP from this page, 
     // but we'll include it for consistency, even if it's not strictly used here.
-    // ... (Mailer setup) ... 
+    // ... (Mailer setup) ..f. 
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();

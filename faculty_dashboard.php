@@ -1,13 +1,11 @@
-
 <?php
 // --- START: DEBUGGING ENABLED (TEMPORARY FIX FOR BLANK PAGE) ---
-// These three lines force PHP to show all errors on the page.
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL); 
 // --- END: DEBUGGING ENABLED ---
 
-// faculty-dashboard.php - The complete working file for the refined dashboard design
+// faculty-dashboard.php - The complete working file with PHPMailer integration
 
 // -----------------------------------------------------------
 // 1. PHP SETUP & DATABASE INTEGRATION
@@ -16,6 +14,14 @@ session_start();
 
 // Set PHP Timezone to IST (India Standard Time) for all calculations
 date_default_timezone_set('Asia/Kolkata');
+
+// --- PHPMailer Dependencies (REQUIRED for Email Sending) ---
+// ⚠️ Ensure 'vendor/autoload.php' is the correct path to your Composer dependencies!
+require_once 'vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 
 // --- ACADEMIC CALENDAR NON-TEACHING DATES (Manual Extraction) ---
 $non_teaching_dates = [
@@ -30,7 +36,7 @@ $non_teaching_dates = [
     '2025-12-12', 
     '2025-12-13', 
     '2025-12-19', 
-    '2025-12-20', 
+    '2025-12-20',
 ];
 
 // --- Check for Weekend or Academic Non-Teaching Day ---
@@ -45,7 +51,7 @@ $isAttendanceDisabledBySchedule = $is_weekend || $is_academic_non_teaching_day;
 $isAttendanceClosedByTime = (time() > strtotime('today 10:30'));
 
 // ---------------------------------------------------------------------------------
-// *** DATABASE CONNECTION (using mysqli as in previous steps) ***
+// *** DATABASE CONNECTION (using mysqli) ***
 // ---------------------------------------------------------------------------------
 $server='localhost';
 $user='root';
@@ -61,7 +67,7 @@ if (mysqli_connect_errno()) {
 // Session check
 if(!isset($_SESSION['faculty_id'])) {
     header('Location:faculty-login.php');
-    exit; // Ensure script stops execution after redirect
+    exit;
 }
 
 $faculty_id = $_SESSION['faculty_id'] ?? 101; 
@@ -86,6 +92,62 @@ if (isset($con) && !$db_error && !$isAttendanceDisabledBySchedule) {
 // --- FINAL ATTENDANCE DISABLE CONDITION (UPDATED) ---
 $isAttendanceDisabled = $isAttendanceClosedByTime || $hasAttendanceBeenMarked || $isAttendanceDisabledBySchedule;
 
+// ----------------------------------------------------------------------
+// *** NEW: PHPMailer Email Function ***
+// ----------------------------------------------------------------------
+
+/**
+ * Sends an email notification to the student about their appointment status.
+ */
+function sendAppointmentEmail($student_email, $student_name, $appointment_status, $slot_date, $slot_time, $faculty_name, $reason = '') {
+    $mail = new PHPMailer(true);
+    
+    // Customize email content based on status
+    $status_text = strtoupper($appointment_status);
+    $subject = "Your Appointment with $faculty_name has been $status_text";
+    $body = "<h2>Appointment Status Update</h2>";
+    $body .= "<p>Dear <strong>" . htmlspecialchars($student_name) . "</strong>,</p>";
+    $body .= "<p>Your appointment request with <strong>" . htmlspecialchars($faculty_name) . "</strong> for <strong>" . htmlspecialchars($slot_date) . "</strong> at <strong>" . htmlspecialchars($slot_time) . "</strong> has been <strong>$status_text</strong>.</p>";
+
+    if ($appointment_status === 'Declined' && $reason) {
+        $body .= "<div style='background:#f8d7da; padding:10px; border-radius:5px; border-left: 5px solid #dc3545;'>";
+        $body .= "<p style='margin:0; color:#721c24;'><strong>Faculty Reason for Decline:</strong> " . htmlspecialchars($reason) . "</p>";
+        $body .= "</div>";
+    } elseif ($appointment_status === 'Approved') {
+        $body .= "<p style='color:#155724;'>We look forward to your visit. Please be on time.</p>";
+    }
+    
+    $body .= "<p>Thank you.</p>";
+    $body .= "<hr><p style='font-size:12px; color:#6c757d;'>Faculty Pool System</p>";
+
+
+    try {
+        // --- SMTP CONFIGURATION (Use your actual settings) ---
+        // ⚠️ You must replace these with your actual SMTP credentials if they change
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'facultypoolthapar@gmail.com';     
+        $mail->Password   = 'xrpvcgnjkqofjlta';   
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; 
+        $mail->Port       = 465;
+
+        $mail->setFrom('facultypoolthapar@gmail.com', 'Faculty Pool');
+        $mail->addAddress($student_email, $student_name);
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+        $mail->AltBody = strip_tags($body); // Plain text fallback
+
+        $mail->send();
+        return true; 
+    } catch (Exception $e) {
+        // Log the detailed error but return a generic failure
+        error_log("Mailer Error to " . $student_email . ": " . $mail->ErrorInfo);
+        return false; 
+    }
+}
+
 
 // ----------------------------------------------------------------------
 // *** APPOINTMENT FETCH LOGIC (SIMPLIFIED and DIRECT) ***
@@ -96,7 +158,6 @@ if (isset($con) && !$db_error) {
     $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
     
     // Fetch all Pending and Approved appointments for the faculty member.
-    // We order by slot_date and slot_time for chronological display.
     $sql = "
         SELECT 
             id, student_name, student_email, contact_number, reason, slot_date, slot_time, status 
@@ -120,69 +181,114 @@ if (isset($con) && !$db_error) {
 } else {
     $db_error = $db_error ?? "Database connection not found or failed.";
 }
-// ----------------------------------------------------------------------
 
 
 // -----------------------------------------------------------
-// --- MODIFIED: HANDLER FOR ALL GET ACTIONS ---
+// --- MODIFIED: HANDLER FOR ALL GET ACTIONS (With Email) ---
 // -----------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET['action'])) {
     
     $action = $_GET['action'];
     $safe_faculty_id = mysqli_real_escape_string($con, $faculty_id);
+    $appointment_id = (int)($_GET['appointment_id'] ?? 0); // Use 0 for attendance action
 
     // Check for database connection
     if (!isset($con) || $db_error) {
         $db_error = "Database connection unavailable for action.";
-    } 
+    } elseif ($action !== 'mark_attendance' && !$appointment_id) {
+         $db_error = 'Error: Missing appointment ID for GET action.';
+    }
     
-    // --- 1. Handle 'accept_appointment' ---
-    elseif ($action === 'accept_appointment' && isset($_GET['appointment_id'])) {
-        
-        $appointment_id = (int)$_GET['appointment_id'];
-        
-        if (!$appointment_id) {
-            $db_error = 'Error: Missing appointment ID for GET action.';
+    // --- STEP 1: Fetch Appointment Details BEFORE Update (Needed for Email) ---
+    $appointment_data = null;
+    $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
+
+    if (in_array($action, ['accept_appointment', 'decline_appointment']) && $appointment_id) {
+        $fetch_sql = "
+            SELECT student_name, student_email, slot_date, slot_time 
+            FROM appointments 
+            WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'
+        ";
+        $fetch_result = mysqli_query($con, $fetch_sql);
+
+        if ($fetch_result && mysqli_num_rows($fetch_result) === 1) {
+            $appointment_data = mysqli_fetch_assoc($fetch_result);
         } else {
-            $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
-            $sql = "UPDATE appointments SET status = 'Approved' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
+            // Only set a DB error if the action requires an appointment ID and it failed to fetch
+            $db_error = $db_error ?? 'Appointment not found or not assigned to this faculty.';
+        }
+    }
+
+    
+    // --- 2. Handle 'accept_appointment' ---
+    if ($action === 'accept_appointment' && $appointment_data) {
+        
+        $sql = "UPDATE appointments SET status = 'Approved' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
+        
+        if (mysqli_query($con, $sql)) {
             
-            if (mysqli_query($con, $sql)) {
-                header('Location: faculty_dashboard.php'); // Reload page
-                exit;
+            // *** EMAIL INTEGRATION FOR ACCEPT ***
+            if (sendAppointmentEmail(
+                $appointment_data['student_email'], 
+                $appointment_data['student_name'], 
+                'Approved', 
+                $appointment_data['slot_date'], 
+                $appointment_data['slot_time'], 
+                $faculty_name
+            )) {
+                $_SESSION['temp_message'] = "Appointment for {$appointment_data['student_name']} Approved. Student notified via email.";
             } else {
-                error_log("Accept Error (GET): " . mysqli_error($con));
-                $db_error = 'Accept failed (GET): SQL Error. Check logs.';
+                $_SESSION['temp_message'] = "Appointment Approved. **FAILED to send email notification** to student. Check system logs.";
             }
+            // **********************************
+
+            header('Location: faculty_dashboard.php'); 
+            exit;
+        } else {
+            error_log("Accept Error (GET): " . mysqli_error($con));
+            $db_error = 'Accept failed: SQL Error. Check logs.';
         }
     }
     
-    // --- 2. Handle 'decline_appointment' ---
-    elseif ($action === 'decline_appointment' && isset($_GET['appointment_id']) && isset($_GET['reason'])) {
+    // --- 3. Handle 'decline_appointment' ---
+    elseif ($action === 'decline_appointment' && $appointment_data && isset($_GET['reason'])) {
         
-        $appointment_id = (int)$_GET['appointment_id'];
         $reason = filter_input(INPUT_GET, 'reason', FILTER_SANITIZE_STRING);
 
         if (empty($reason)) {
             $db_error = 'Decline reason cannot be empty.';
-        } elseif (!$appointment_id) {
-            $db_error = 'Error: Missing appointment ID for decline.';
         } else {
-            $safe_appointment_id = mysqli_real_escape_string($con, $appointment_id);
             $safe_reason = mysqli_real_escape_string($con, $reason);
             
             $sql = "UPDATE appointments SET status = 'Declined', reason1 = '$safe_reason' WHERE id = '$safe_appointment_id' AND faculty_id = '$safe_faculty_id'";
             if (mysqli_query($con, $sql)) {
-                 header('Location: faculty_dashboard.php'); // Reload page
+
+                // *** EMAIL INTEGRATION FOR DECLINE ***
+                if (sendAppointmentEmail(
+                    $appointment_data['student_email'], 
+                    $appointment_data['student_name'], 
+                    'Declined', 
+                    $appointment_data['slot_date'], 
+                    $appointment_data['slot_time'], 
+                    $faculty_name,
+                    $reason
+                )) {
+                     $_SESSION['temp_message'] = "Appointment for {$appointment_data['student_name']} Declined. Student notified via email.";
+                } else {
+                     $_SESSION['temp_message'] = "Appointment Declined. **FAILED to send email notification** to student. Check system logs.";
+                }
+                // **********************************
+
+                 header('Location: faculty_dashboard.php'); 
                  exit;
             } else {
                 error_log("Decline Error (GET): " . mysqli_error($con));
-                $db_error = 'Decline failed (GET): SQL Error.';
+                $db_error = 'Decline failed: SQL Error.';
             }
         }
     }
     
-    // --- 3. Handle 'mark_attendance' (UPDATED LOGIC) ---
+    // --- 4. Handle 'mark_attendance' (Existing logic) ---
     elseif ($action === 'mark_attendance' && isset($_GET['status'])) {
         
         if ($isAttendanceDisabledBySchedule) {
@@ -221,7 +327,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET['action'])) {
 // 2. HTML STRUCTURE (Main Page Content)
 // -----------------------------------------------------------
 
-// Check for and display temporary messages (e.g., from attendance)
+// Check for and display temporary messages (e.g., from attendance or appointment actions)
 $temp_message = null;
 if (isset($_SESSION['temp_message'])) {
     $temp_message = $_SESSION['temp_message'];
@@ -479,7 +585,6 @@ if (isset($_SESSION['temp_message'])) {
                             <p><strong>Email:</strong> <a href="mailto:<?= htmlspecialchars($appointment['student_email']) ?>"><?= htmlspecialchars($appointment['student_email']) ?></a></p>
                             <p><strong>Contact:</strong> <?= htmlspecialchars($appointment['contact_number']) ?></p> 
                             <p><strong>Reason:</strong> <?= htmlspecialchars($appointment['reason']) ?></p>
-                            <!-- Updated display to show Date & Time from new columns -->
                             <p><strong>Date & Time:</strong> <?= htmlspecialchars($appointment['slot_date']) ?> at <?= htmlspecialchars($appointment['slot_time']) ?></p> 
 
                             <div class="mt-3 d-flex justify-content-end gap-2">

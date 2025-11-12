@@ -1,7 +1,14 @@
 <?php
-// faculty-projects-redesign.php
+// faculty-projects-redesign.php (Complete Code without JavaScript Alerts)
 session_start();
 require_once 'db.php'; // keep your DB connection
+
+// --- PHPMailer Dependencies ---
+require_once 'vendor/autoload.php'; 
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     header('Location: teacher-login.php');
@@ -9,25 +16,105 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 $faculty_id = $_SESSION['faculty_id'];
-// Updated: Fetch faculty name from session for display
 $faculty_name = $_SESSION['faculty_name'] ?? 'Faculty Member'; 
-$message_html = '';
-$departments = []; // Array to hold department names
-$view_mode = $_GET['view'] ?? 'projects'; // 'projects' or 'applications'
 
-// --- START: DEPARTMENT FETCHING ---
+// Use session to store messages across redirects instead of $_GET
+$message_html = '';
+if (isset($_SESSION['temp_message_html'])) {
+    $message_html = $_SESSION['temp_message_html'];
+    unset($_SESSION['temp_message_html']); // Clear it after reading
+}
+
+$departments = []; 
+$view_mode = $_GET['view'] ?? 'projects'; 
+
+// --- HELPER FUNCTION: HTML Alert Generator ---
+function alert_html($msg, $type = 'info') {
+    // Maps alert type to Tailwind CSS colors
+    $color = ['success' => 'emerald', 'danger' => 'rose', 'warning' => 'amber', 'info' => 'sky'][$type] ?? 'sky';
+    
+    // We escape the message here
+    $escaped_msg = htmlspecialchars($msg);
+    
+    return "<div class=\"mb-6 p-4 rounded-xl bg-{$color}-50 border border-{$color}-200 shadow-sm\" role=\"alert\">
+                <div class=\"font-semibold text-{$color}-700 flex items-center gap-2\">
+                    <i class=\"fas fa-exclamation-circle\"></i>{$escaped_msg}
+                </div>
+            </div>";
+}
+
+
+// ----------------------------------------------------------------------
+// *** PHPMailer Email Function for Applications (Unchanged) ***
+// ----------------------------------------------------------------------
+
+function sendApplicationEmail(
+    $student_email, 
+    $student_name, 
+    $project_name, 
+    $status, 
+    $faculty_name
+) {
+    $mail = new PHPMailer(true);
+    
+    // Customize email content based on status
+    $status_text = strtoupper($status);
+    $color_style = ($status === 'Accepted') ? 'color:#15803d;' : 'color:#b91c1c;';
+    $subject = "Update: Your Project Application Status - " . htmlspecialchars($project_name);
+    
+    $body = "<h2>Project Application Status</h2>";
+    $body .= "<p>Dear <strong>" . htmlspecialchars($student_name) . "</strong>,</p>";
+    $body .= "<p>Your application for the project/research titled <strong>" . htmlspecialchars($project_name) . "</strong> has been reviewed by Prof. " . htmlspecialchars($faculty_name) . ".</p>";
+    $body .= "<p>The status of your application is: <strong style=\"$color_style\">$status_text</strong>.</p>";
+
+    if ($status === 'Accepted') {
+        $body .= "<div style='padding:15px; border-radius:8px; background:#dcfce7; border-left:5px solid #15803d;'>";
+        $body .= "<p style='margin:0; font-weight:600; color:#15803d;'>Congratulations! Prof. " . htmlspecialchars($faculty_name) . " will contact you shortly to discuss the next steps.</p>";
+        $body .= "</div>";
+    } elseif ($status === 'Rejected') {
+        $body .= "<p>The faculty receives many excellent applications, and only a limited number can be accepted. We encourage you to apply for other projects.</p>";
+    }
+    
+    $body .= "<p>Best regards,<br>Faculty Pool System</p>";
+
+    try {
+        // --- SMTP CONFIGURATION (Use your consistent settings) ---
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'facultypoolthapar@gmail.com';     
+        $mail->Password   = 'xrpvcgnjkqofjlta';   
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; 
+        $mail->Port       = 465;
+
+        $mail->setFrom('facultypoolthapar@gmail.com', 'Faculty Pool');
+        $mail->addAddress($student_email, $student_name);
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+        $mail->AltBody = strip_tags($body); 
+
+        $mail->send();
+        return true; 
+    } catch (Exception $e) {
+        error_log("Application Mailer Error to $student_email: {$mail->ErrorInfo}");
+        return false; 
+    }
+}
+
+
+// --- START: DEPARTMENT FETCHING (Existing Logic) ---
 try {
-    // Fetch all department names from the departments table
     $stmt = $pdo->prepare("SELECT department_name FROM departments ORDER BY department_name ASC");
     $stmt->execute();
     $departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
     error_log("Error fetching departments: " . $e->getMessage());
-    $message_html = alert_html('Warning: Could not load department list from the database.', 'warning');
+    $_SESSION['temp_message_html'] = alert_html('Warning: Could not load department list from the database.', 'warning');
 }
 // --- END: DEPARTMENT FETCHING ---
 
-// Allowed project file types (omitted for brevity)
+// Allowed project file types 
 $allowed_project_types = ['application/zip', 'application/x-zip-compressed', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 $upload_dir = __DIR__ . DIRECTORY_SEPARATOR . 'project_bid' . DIRECTORY_SEPARATOR; 
 $web_upload_dir = 'project_bid/'; 
@@ -35,9 +122,9 @@ $web_upload_dir = 'project_bid/';
 if (!is_dir($upload_dir)) {
     @mkdir($upload_dir, 0755, true);
 }
-$submission_success = isset($_GET['success']) && $_GET['success'] == 1;
 
-// --- START: DELETION LOGIC (omitted for brevity) ---
+
+// --- START: DELETION LOGIC (Updated to use Session Message) ---
 if (isset($_GET['delete_id']) && is_numeric($_GET['delete_id'])) {
     $delete_id = filter_input(INPUT_GET, 'delete_id', FILTER_SANITIZE_NUMBER_INT);
 
@@ -46,20 +133,80 @@ if (isset($_GET['delete_id']) && is_numeric($_GET['delete_id'])) {
         $stmt->execute([':id' => $delete_id, ':faculty_id' => $faculty_id]);
 
         if ($stmt->rowCount()) {
-            header('Location: faculty-projects.php?success=2'); 
-            exit;
+             // Store success message in session for display after redirect
+             $_SESSION['temp_message_html'] = alert_html('Success! The project has been deleted from the database.', 'success');
         } else {
-            $message_html = alert_html('Error: Project not found or unauthorized to delete.', 'danger');
+            $_SESSION['temp_message_html'] = alert_html('Error: Project not found or unauthorized to delete.', 'danger');
         }
     } catch (PDOException $e) {
         error_log('Research and Projects Delete Error: ' . $e->getMessage());
-        $message_html = alert_html('Database Deletion Error: ' . $e->getMessage(), 'danger');
+        $_SESSION['temp_message_html'] = alert_html('Database Deletion Error: ' . $e->getMessage(), 'danger');
     }
+    // Redirect to clean the URL
+    header('Location: faculty-projects.php?view=projects'); 
+    exit;
 }
 // --- END: DELETION LOGIC ---
 
 
-// --- START: Database Update/Insertion Logic (omitted for brevity) ---
+// --- START: APPLICATION ACTION HANDLER (ACCEPT/REJECT) ---
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && isset($_GET['app_id'])) {
+    
+    $action = $_GET['action']; // 'accept_app' or 'reject_app'
+    $app_id = filter_input(INPUT_GET, 'app_id', FILTER_SANITIZE_NUMBER_INT);
+
+    if ($app_id && in_array($action, ['accept_app', 'reject_app'])) {
+        try {
+            // STEP 1: Fetch details needed for the email and security check
+            $stmt = $pdo->prepare("
+                SELECT pa.status, s.Email, s.Name, p.name AS project_name
+                FROM project_applications pa
+                JOIN student s ON pa.student_id = s.Student_ID
+                JOIN projects p ON pa.project_id = p.id
+                WHERE pa.application_id = :app_id AND p.faculty_id = :faculty_id
+            ");
+            $stmt->execute([':app_id' => $app_id, ':faculty_id' => $faculty_id]);
+            $app_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$app_data) {
+                $_SESSION['temp_message_html'] = alert_html('Error: Application not found or unauthorized access.', 'danger');
+            } else {
+                $new_status = ($action === 'accept_app') ? 'Accepted' : 'Rejected';
+                
+                // STEP 2: Update the application status
+                $update_stmt = $pdo->prepare("UPDATE project_applications SET status = :status WHERE application_id = :app_id");
+                $update_stmt->execute([':status' => $new_status, ':app_id' => $app_id]);
+
+                // STEP 3: Send Email Notification
+                $email_success = sendApplicationEmail(
+                    $app_data['Email'], 
+                    $app_data['Name'], 
+                    $app_data['project_name'], 
+                    $new_status, 
+                    $faculty_name
+                );
+
+                $msg_text = "Application for '{$app_data['project_name']}' has been $new_status.";
+                
+                if ($email_success) {
+                    $_SESSION['temp_message_html'] = alert_html($msg_text . " Student notified via email.", 'success');
+                } else {
+                    $_SESSION['temp_message_html'] = alert_html($msg_text . " **Warning: Failed to send email notification.** Check system logs.", 'warning');
+                }
+            }
+        } catch (PDOException $e) {
+            error_log('Application Action Error: ' . $e->getMessage());
+            $_SESSION['temp_message_html'] = alert_html('Database Error during application update.', 'danger');
+        }
+    }
+    // Redirect to clean the URL and keep on the applications view
+    header('Location: faculty-projects.php?view=applications');
+    exit;
+}
+// --- END: APPLICATION ACTION HANDLER ---
+
+
+// --- START: Database Update/Insertion Logic (Updated to use Session Message) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_projects'])) { 
     
     $name = trim(filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING));
@@ -80,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_proj
 
     // 2. File Upload Handling 
     if ($upload_success && isset($_FILES[$file_input_name]) && $_FILES[$file_input_name]['error'] !== UPLOAD_ERR_NO_FILE) {
+        // ... (File upload logic is unchanged, ensures $upload_success and $file_path are set) ...
         if ($_FILES[$file_input_name]['error'] === UPLOAD_ERR_OK) {
             $tmp = $_FILES[$file_input_name]['tmp_name'];
             $mime = mime_content_type($tmp) ?: '';
@@ -125,7 +273,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_proj
                 ':faculty_id' => $faculty_id, ':expertise' => $expertise, ':bid' => $file_path, ':type' => $type
             ]);
 
-            header('Location: faculty-projects.php?success=1'); 
+            // Store success message in session for display after redirect
+            $_SESSION['temp_message_html'] = alert_html('Success! New Research or Projects entry has been added.', 'success');
+            
+            header('Location: faculty-projects.php?view=projects'); 
             exit;
 
         } catch (PDOException $e) {
@@ -137,10 +288,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_research_and_proj
 // --- END: Database Update/Insertion Logic ---
 
 
-// --- START: APPLICATION RETRIEVAL LOGIC ---
+// --- START: APPLICATION RETRIEVAL LOGIC (Filter by Pending Status) ---
 $student_applications = [];
 if ($view_mode === 'applications') {
     try {
+        // NOTE: Changed to only fetch PENDING applications to keep the dashboard clean
         $stmt = $pdo->prepare("
             SELECT
                 pa.application_id, pa.application_date, pa.status AS application_status,
@@ -151,7 +303,7 @@ if ($view_mode === 'applications') {
             FROM project_applications pa
             JOIN projects p ON pa.project_id = p.id
             JOIN student s ON pa.student_id = s.Student_ID
-            WHERE p.faculty_id = :faculty_id
+            WHERE p.faculty_id = :faculty_id AND pa.status = 'Pending'
             ORDER BY pa.application_date DESC
         ");
         $stmt->execute([':faculty_id' => $faculty_id]);
@@ -167,7 +319,7 @@ if ($view_mode === 'applications') {
 
     } catch (PDOException $e) {
         error_log('Application Fetch Error: ' . $e->getMessage());
-        $message_html = alert_html('Could not fetch student applications. Database Error.', 'danger');
+        $message_html = $message_html . alert_html('Could not fetch student applications. Database Error.', 'danger');
     }
 }
 // --- END: APPLICATION RETRIEVAL LOGIC ---
@@ -198,19 +350,10 @@ if ($view_mode === 'projects') {
         
     } catch (PDOException $e) {
         error_log('Research and Projects Fetch Error: ' . $e->getMessage()); 
-        if ($message_html == '') { 
-            $message_html = alert_html('Could not fetch research and projects lists. DEBUG: ' . $e->getMessage(), 'warning');
-        }
+        $message_html = $message_html . alert_html('Could not fetch research and projects lists. Database Error.', 'warning');
     }
 }
 // --- END: Database Retrieval/Counting Logic ---
-
-
-function alert_html($msg, $type = 'info') {
-    $color = ['success' => 'emerald', 'danger' => 'rose', 'warning' => 'amber', 'info' => 'sky'][$type] ?? 'sky';
-    return "<div class=\"mb-6 p-4 rounded-xl bg-{$color}-50 border border-{$color}-200 shadow-sm\" role=\"alert\"><div class=\"font-semibold text-{$color}-700 flex items-center gap-2\"><i class=\"fas fa-exclamation-circle\"></i>" . htmlspecialchars($msg) . "</div></div>";
-}
-
 ?>
 <!doctype html>
 <html lang="en">
@@ -247,14 +390,12 @@ function alert_html($msg, $type = 'info') {
             <h1 class="text-xl font-bold">
                 Research & Projects
             </h1>
-            <!-- NEW: Welcome and Faculty Name -->
             <span class="text-sm opacity-80 border-l border-white/50 pl-4">
                 Welcome, **<?php echo htmlspecialchars($faculty_name); ?>**
             </span>
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <!-- NEW: Home Button -->
         <a href="index.php" class="header-link text-white border border-white hover:bg-white hover:text-[#7f1d1d] transition">
             <i class="fas fa-home mr-1"></i> Home
         </a>
@@ -304,7 +445,6 @@ function alert_html($msg, $type = 'info') {
             
             <div class="space-y-4">
                 <?php if ($view_mode === 'projects'): ?>
-                    <!-- PROJECT LIST DISPLAY -->
                     <?php if (!empty($my_projects)): ?>
                         <?php foreach ($my_projects as $project): ?>
                             <div class="card p-5 project-list-item transition duration-200">
@@ -351,7 +491,6 @@ function alert_html($msg, $type = 'info') {
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
-                    <!-- APPLICATION LIST DISPLAY -->
                     <?php if (!empty($student_applications)): ?>
                         <?php foreach ($student_applications as $app): ?>
                             <div class="app-card grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -386,12 +525,16 @@ function alert_html($msg, $type = 'info') {
                                     </div>
                                     <p class="text-sm text-gray-600">Applied on: <?php echo date('M d, Y H:i', strtotime($app['application_date'])); ?></p>
                                     <div class="mt-4 flex gap-2">
-                                        <button class="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition" onclick="alert('Accept logic here for application ID: <?php echo $app['application_id']; ?>')">
+                                        <a href="faculty-projects.php?action=accept_app&app_id=<?php echo $app['application_id']; ?>" 
+                                           class="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition" 
+                                           onclick="return confirm('Are you sure you want to ACCEPT this application? The student will be notified via email.')">
                                             <i class="fas fa-check"></i> Accept
-                                        </button>
-                                        <button class="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition" onclick="alert('Reject logic here for application ID: <?php echo $app['application_id']; ?>')">
+                                        </a>
+                                        <a href="faculty-projects.php?action=reject_app&app_id=<?php echo $app['application_id']; ?>" 
+                                           class="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                                           onclick="return confirm('Are you sure you want to REJECT this application? The student will be notified via email.')">
                                             <i class="fas fa-times"></i> Reject
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -412,7 +555,6 @@ function alert_html($msg, $type = 'info') {
     </div>
   </main>
 
-  <!-- Project Modal (omitted for brevity) -->
   <div id="projectModal" class="fixed inset-0 hidden z-50" aria-hidden="true">
     <div class="absolute inset-0 backdrop"></div>
     <div class="relative modal-panel-container"> 
@@ -530,7 +672,7 @@ function alert_html($msg, $type = 'info') {
     cancelBtn?.addEventListener('click', hideModal);
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') hideModal(); });
     
-    // File Input Handling (Simplified for brevity)
+    // File Input Handling 
     const fileInput = document.getElementById('project_file_input');
     const attachedFile = document.getElementById('attachedFile');
     fileInput?.addEventListener('change', (e)=>{
@@ -545,29 +687,6 @@ function alert_html($msg, $type = 'info') {
             window.location.href = 'faculty-projects.php?delete_id=' + projectId;
         }
     }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (urlParams.has('success')) {
-            const successCode = urlParams.get('success');
-            
-            if (successCode === '1') {
-                alert("Success! Your Research and Projects entry has been added to the database.");
-            } else if (successCode === '2') {
-                alert("Success! The project has been deleted from the database.");
-            }
-
-            if (history.replaceState) {
-                history.replaceState(null, null, window.location.pathname);
-            }
-        }
-        
-        // Open modal if we are viewing applications initially
-        if ('<?php echo $view_mode; ?>' === 'applications') {
-            // No action needed since we display applications in the main content area now
-        }
-    });
   </script>
 
 </body>
