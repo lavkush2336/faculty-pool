@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost
--- Generation Time: Nov 12, 2025 at 12:48 AM
--- Server version: 10.4.28-MariaDB
--- PHP Version: 8.2.4
+-- Host: 127.0.0.1
+-- Generation Time: Nov 12, 2025 at 10:59 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -1283,9 +1283,40 @@ CREATE TABLE `projects` (
   `department_id` int(11) NOT NULL,
   `faculty_id` int(11) NOT NULL,
   `expertise` varchar(500) NOT NULL,
-  `bid` varchar(1000) NOT NULL,
+  `bid` varchar(1000) DEFAULT NULL,
   `type` enum('project','research') DEFAULT 'project'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `projects`
+--
+
+INSERT INTO `projects` (`id`, `name`, `description`, `department_id`, `faculty_id`, `expertise`, `bid`, `type`) VALUES
+(1, 'teacher&#39;s pool', 'hbjgvubhlbhlibiiuyvbu', 4, 216, 'web development , app development , devops', 'project_bid/1762905769_Project_Description.docx', 'project'),
+(2, 'jenkins-git-demo', 'jhbbjlkjhlhbh;jkhvbhlkjbu', 4, 216, 'devops', NULL, 'research'),
+(3, 'lavkush2336&#39;s Org', 'jsdnkjjnsdljcndjkcnd', 11, 216, 'machine learning , python , advance learning', NULL, 'project');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_applications`
+--
+
+CREATE TABLE `project_applications` (
+  `application_id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `application_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `status` enum('pending','accepted','rejected') DEFAULT 'pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_applications`
+--
+
+INSERT INTO `project_applications` (`application_id`, `project_id`, `student_id`, `application_date`, `status`) VALUES
+(1, 1, 1, '2025-11-12 00:49:14', 'pending'),
+(2, 3, 1, '2025-11-12 09:51:43', 'pending');
 
 -- --------------------------------------------------------
 
@@ -1301,16 +1332,17 @@ CREATE TABLE `student` (
   `phone` varchar(15) NOT NULL,
   `institute` varchar(250) NOT NULL,
   `department` varchar(200) NOT NULL,
-  `expertise` varchar(1000) NOT NULL
+  `expertise` varchar(1000) NOT NULL,
+  `cv_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `student`
 --
 
-INSERT INTO `student` (`Student_ID`, `Name`, `email`, `password`, `phone`, `institute`, `department`, `expertise`) VALUES
-(1, 'lavkush vashistha', 'lavkush.vashistha908@gmail.com', '$2y$10$PzcwMVDoHneErf13Bob/iO4f7jozwMA6S2lZh76eUR1mQFjPI6ufG', '8800736949', 'thapar institute', 'Computer Science & Engineering', 'web development'),
-(2, 'Krish gupta', 'krishgupta0072@gmail.com', '$2y$10$FRQWCMaEGT6tcZeMfnHvmOVaLc2Xu6asQfnnv1vydjfS4vcgzJN6C', '9336772455', 'TIET', 'Computer Science & Engineering', 'WEB DEV');
+INSERT INTO `student` (`Student_ID`, `Name`, `email`, `password`, `phone`, `institute`, `department`, `expertise`, `cv_path`) VALUES
+(1, 'lavkush vashistha', 'lavkush.vashistha908@gmail.com', '$2y$10$02IxgO2UHkiA6qOORqLVouzxQZizhp/Cdo23KlNEWRF1XwZtSinTO', '+918800736949', 'thapar institute', 'Computer Science & Engineering', 'web development', 'student_cv_files/1_1762906938.docx'),
+(2, 'Krish gupta', 'krishgupta0072@gmail.com', '$2y$10$FRQWCMaEGT6tcZeMfnHvmOVaLc2Xu6asQfnnv1vydjfS4vcgzJN6C', '9336772455', 'TIET', 'Computer Science & Engineering', 'WEB DEV', NULL);
 
 -- --------------------------------------------------------
 
@@ -1359,6 +1391,14 @@ ALTER TABLE `projects`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `project_applications`
+--
+ALTER TABLE `project_applications`
+  ADD PRIMARY KEY (`application_id`),
+  ADD UNIQUE KEY `unique_application` (`project_id`,`student_id`),
+  ADD KEY `student_id` (`student_id`);
+
+--
 -- Indexes for table `student`
 --
 ALTER TABLE `student`
@@ -1402,13 +1442,30 @@ ALTER TABLE `faculty`
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `project_applications`
+--
+ALTER TABLE `project_applications`
+  MODIFY `application_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `student`
 --
 ALTER TABLE `student`
   MODIFY `Student_ID` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `project_applications`
+--
+ALTER TABLE `project_applications`
+  ADD CONSTRAINT `project_applications_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `project_applications_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `student` (`Student_ID`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
