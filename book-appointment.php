@@ -368,10 +368,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     @media (max-width: 480px) {
       .layout { gap: 16px; }
-      .faculty-image { height: 240px; }
+      .faculty-image { height: auto; }
       .faculty-name { font-size: 1.4rem; }
       .faculty-title { font-size: 0.95rem; }
       .faculty-special { font-size: 0.92rem; line-height: 1.6; }
+    }
+    /* Prevent image cropping on small mobile screens */
+    @media (max-width: 480px) {
+      .faculty-image img {
+        width: 100%;
+        height: auto;
+        max-height: 732px; /* matches reported device height to avoid overflow */
+        object-fit: contain;
+        object-position: center center;
+      }
     }
 
     /* right form card */

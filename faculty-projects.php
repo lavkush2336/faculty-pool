@@ -440,11 +440,19 @@ if ($view_mode === 'projects') {
   <header class="w-full sticky top-0 z-50 dashboard-header">
     <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
       <div class="flex items-center gap-4">
+        <button id="fpMobileMenuButton" class="md:hidden p-2 rounded border border-white/40 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white" aria-controls="fpMobileMenu" aria-expanded="false">
+          <i class="fas fa-bars text-xl text-white"></i>
+        </button>
         <div class="flex items-center gap-4">
             <span class="text-sm opacity-80 border-l border-white/50 pl-4">Welcome, <strong><?php echo htmlspecialchars($faculty_name); ?></strong></span>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 md:hidden">
+        <a href="logout.php" class="header-link text-sm rounded-lg transition">
+            <i class="fas fa-sign-out-alt mr-1"></i>Logout
+        </a>
+      </div>
+      <div class="hidden md:flex items-center gap-3">
         <a href="index.php" class="header-link text-white border border-white hover:bg-white hover:text-[#7f1d1d] transition">
             <i class="fas fa-home mr-1"></i> Home
         </a>
@@ -458,6 +466,17 @@ if ($view_mode === 'projects') {
             <i class="fas fa-sign-out-alt mr-1"></i>Logout
         </a>
       </div>
+    </div>
+    <div id="fpMobileMenu" class="md:hidden hidden px-4 pb-4 space-y-2">
+      <a href="index.php" class="block header-link border border-white/60 text-white/95">
+        <i class="fas fa-home mr-1"></i> Home
+      </a>
+      <a href="faculty-projects.php?view=projects" class="block header-link border border-white/60 text-white/95">
+        <i class="fas fa-list mr-1"></i> My Projects
+      </a>
+      <a href="faculty-projects.php?view=applications" class="block header-link border border-white/60 text-white/95">
+        <i class="fas fa-users mr-1"></i> View Student Applications
+      </a>
     </div>
   </header>
   <main class="max-w-7xl mx-auto px-4 py-8 content-area">
@@ -723,12 +742,18 @@ if ($view_mode === 'projects') {
       attachedFile.textContent = `${f.name} (${(f.size/1024).toFixed(1)} KB)`;
     });
 
-    // Function to handle direct Deletion Confirmation
     function deleteProjectConfirmation(projectId) {
         if (confirm("Are you sure you want to permanently delete Project ID " + projectId + "? This action cannot be undone.")) {
             window.location.href = 'faculty-projects.php?delete_id=' + projectId;
         }
     }
+    const fpBtn = document.getElementById('fpMobileMenuButton');
+    const fpMenu = document.getElementById('fpMobileMenu');
+    fpBtn?.addEventListener('click', ()=>{
+      fpMenu.classList.toggle('hidden');
+      const expanded = fpBtn.getAttribute('aria-expanded') === 'true';
+      fpBtn.setAttribute('aria-expanded', (!expanded).toString());
+    });
   </script>
 
 </body>
