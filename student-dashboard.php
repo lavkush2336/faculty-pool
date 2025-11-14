@@ -45,6 +45,20 @@ $success_message = null;
 $error_message = null;
 $view_all = isset($_GET['view_all']) && $_GET['view_all'] === 'true';
 
+// --- FIXED: Fetch departments list for the modal dropdown (Must run always) ---
+$departments = [];
+try {
+    $stmt = $pdo->prepare("SELECT department_name FROM departments ORDER BY department_name ASC");
+    $stmt->execute();
+    $departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    error_log("Error fetching departments: " . $e->getMessage());
+    // Display a generic error if this fetch fails, but let the rest of the page load.
+    $db_error = $db_error ?? "Could not load department list. Database connection issue.";
+}
+// --- END DEPARTMENT FETCHING FIX ---
+
+
 // --- NEW: APPLICATION SUBMISSION HANDLER ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_project_id'])) {
     $project_id_to_apply = filter_input(INPUT_POST, 'apply_project_id', FILTER_VALIDATE_INT);
@@ -1180,7 +1194,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
     </div>
 </div>
 
-<!-- Edit Profile Modal (omitted for brevity, content unchanged except for file input fix) -->
+<!-- Edit Profile Modal -->
 <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
