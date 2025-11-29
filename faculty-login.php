@@ -80,14 +80,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .decoration { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0; }
     .decoration-line { width: 30px; height: 2px; background: linear-gradient(90deg, transparent, #8B0000, transparent); }
     .decoration-dot { width: 6px; height: 6px; background: #8B0000; border-radius: 50%; }
+    
+    /* === NEW STYLES FOR BACK TO HOME BUTTON === */
+    .back-to-home {
+        position: fixed; /* Fixed position */
+        top: 20px;
+        left: 20px;
+        color: #8B0000;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 8px 15px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .back-to-home:hover {
+        color: #A52A2A;
+        transform: translateX(-5px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Responsive adjustment for small screens */
+    @media (max-width: 500px) {
+        .back-to-home {
+            top: 10px;
+            left: 10px;
+            font-size: 0.9rem;
+            padding: 6px 12px;
+        }
+    }
   </style>
 </head>
 <body>
+    <a href="index.php" class="back-to-home">
+        <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+    
   <div class="login-container">
     <div class="login-card">
       <div class="header">
-        <i class="fas fa-university"></i>
-        <h2>Faculty Login</h2>
+        <i class="fas fa-user-tie"></i> <h2>Faculty Login</h2>
         <p>Access your Faculty Pool account.</p>
         <div class="decoration">
           <div class="decoration-line"></div>

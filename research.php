@@ -21,14 +21,31 @@
   <nav class="creative-nav">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex justify-between items-center py-3">
-        <div class="flex space-x-8">
-          <a href="index.php" class="nav-item">HOME</a>
-          <a href="department.php" class="nav-item">PROGRAMS</a>
+        
+        <div class="flex items-center w-full justify-between sm:justify-start">
+            
+            <button id="mobileMenuButton" class="sm:hidden p-2 rounded border border-slate-300/60 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-600" aria-controls="mobileMenu" aria-expanded="false">
+              <span class="sr-only">Open main menu</span>
+              <i class="fas fa-bars text-xl text-white"></i>
+            </button>
+            
+            <div class="space-x-8 max-sm:hidden sm:flex">
+              <a href="index.php" class="nav-item">HOME</a>
+              <a href="department.php" class="nav-item">PROGRAMS</a>
+            </div>
         </div>
-        <div class="flex space-x-8">
+
+        <div class="space-x-8 max-sm:hidden sm:flex">
           <a href="faculty-member.php" class="nav-item">FACULTY</a>
           <a href="student.php" class="nav-item">STUDENT'S DOMAIN</a> 
         </div>
+        </div>
+
+      <div id="mobileMenu" class="sm:hidden hidden px-2 pb-3 space-y-2 bg-[#8B0000]">
+        <a href="index.php" class="block nav-item">HOME</a>
+        <a href="department.php" class="block nav-item">PROGRAMS</a>
+        <a href="faculty-member.php" class="block nav-item">FACULTY</a>
+        <a href="student.php" class="block nav-item">STUDENT'S DOMAIN</a>
       </div>
     </div>
   </nav>
@@ -84,6 +101,17 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       AOS && AOS.init && AOS.init({ duration: 700, easing: 'ease-in-out', once: true, offset: 100 });
+      
+      // MOBILE MENU TOGGLE LOGIC - ADDED
+      const btn = document.getElementById('mobileMenuButton');
+      const menu = document.getElementById('mobileMenu');
+      if (btn && menu) {
+        btn.addEventListener('click', () => {
+          menu.classList.toggle('hidden');
+          const expanded = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', (!expanded).toString());
+        });
+      }
     });
   </script>
 </body>
