@@ -72,7 +72,7 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <!-- AOS -->
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-  <style>
+ <style>
     /* Styles adapted for the wide card design from faculty-member.php */
     .departments-grid {
         display: flex;
@@ -104,6 +104,7 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         box-shadow: 0 15px 40px rgba(139, 0, 0, 0.15);
     }
 
+    /* DESKTOP STYLES (UNCHANGED) */
     .faculty-image-container {
         flex: 0 0 180px; /* Fixed width for the image container */
         min-height: 100%;
@@ -133,28 +134,26 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         margin-bottom: 3px;
     }
     
-    /* MODIFIED: Reduced bottom margin for h5 and h6 to tighten spacing */
     .faculty-info h5 {
         font-weight: 500;
         color: #444;
         font-size: 1rem;
-        margin-bottom: 5px; /* Reduced from 15px to 5px */
+        margin-bottom: 5px; 
     }
 
     .faculty-info h6 {
         font-weight: 600;
         color: #8B0000;
         text-transform: uppercase;
-        font-size: 0.9rem; /* Adjusted font size for title lines */
-        margin-bottom: 3px; /* Reduced from 10px to 3px */
+        font-size: 0.9rem; 
+        margin-bottom: 3px; 
         margin-top: 10px;
     }
 
-    /* Additional spacing for the specific info lines based on screenshot */
     .faculty-info .info-line {
         font-size: 1rem;
         color: #333;
-        margin-bottom: 5px; /* Tight spacing between info lines */
+        margin-bottom: 5px; 
         display: flex;
         align-items: center;
     }
@@ -175,29 +174,47 @@ $facultyList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         margin-bottom: 5px;
         white-space: nowrap;
     }
-    /* END MODIFIED */
 
+    /* === MOBILE FIX: Force image to a centered square on small screens === */
     @media (max-width: 768px) {
         .faculty-card {
             flex-direction: column;
+            text-align: center; /* Center text under the image */
         }
 
         .faculty-image-container {
+            /* Restrict width and center it */
+            max-width: 150px; 
+            margin: 20px auto 10px auto; 
+            
+            /* Force 1:1 square aspect ratio */
             flex: 0 0 auto;
-            height: 200px;
-            width: 100%;
+            width: 100%; 
+            aspect-ratio: 1 / 1; 
+            
+            /* Reset mobile borders */
             border-right: none;
-            border-bottom: 4px solid #8B0000;
+            border-bottom: none;
+            
+            /* Polish: Make it look like a rounded profile picture */
+            border-radius: 50%; /* Optional: Use a circle border-radius for a standard profile pic look */
+            overflow: hidden; /* Ensure the image is clipped to the circle/square */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
         
         .faculty-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: top center;
         }
 
         .faculty-info {
             padding: 20px;
+        }
+        
+        .faculty-info .info-line {
+            justify-content: center; /* Center the icons and text on mobile */
         }
     }
   </style>
